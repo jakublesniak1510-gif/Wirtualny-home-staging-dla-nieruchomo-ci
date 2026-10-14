@@ -59,6 +59,8 @@ model Order {
   /// Użyty kod pakietu (prepaid), jeśli był
   packageCodeId String?
   packageCode   PackageCode? @relation(fields: [packageCodeId], references: [id], onDelete: SetNull)
+  /// Ile kredytów kodu pakietu zarezerwowano dla tego zamówienia (zwalniane przy anulowaniu)
+  packageCreditsUsed Int @default(0)
   /// Kod polecenia podany przez klienta (realizacja nagrody ręcznie przez admina)
   referralCode  String?
   notes         String?
@@ -74,12 +76,16 @@ model Order {
   updatedAt   DateTime  @updatedAt
   paidAt      DateTime?
   deliveredAt DateTime?
+  cancelledAt DateTime?
+  /// Kiedy pliki zamówienia usunięto z magazynu (sprzątanie po 30 dniach)
+  filesDeletedAt DateTime?
 
   photos Photo[]
 
   @@index([status])
   @@index([email])
   @@index([createdAt])
+  @@index([isSample, email])
 }
 
 model Photo {

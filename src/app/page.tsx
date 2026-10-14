@@ -9,6 +9,7 @@ import { SectionHeading } from "@/components/SectionHeading";
 import { Steps } from "@/components/Steps";
 import type { Step } from "@/components/Steps";
 import { StyleCard } from "@/components/StyleCard";
+import { OrganizationJsonLd } from "@/components/JsonLd";
 import { FAQ_HOME } from "@/content/faq";
 import { PORTFOLIO } from "@/content/portfolio";
 import { HAS_PLACEHOLDER_TESTIMONIALS, TESTIMONIALS } from "@/content/testimonials";
@@ -99,6 +100,7 @@ function CheckIcon({ className = "" }: { className?: string }) {
 export default function HomePage() {
   return (
     <>
+      <OrganizationJsonLd />
       {/* HERO */}
       <section aria-labelledby="hero-title" className="overflow-hidden pb-16 pt-10 sm:pt-14 lg:pb-24 lg:pt-20">
         <div className="container-x grid items-center gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
