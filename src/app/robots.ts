@@ -10,7 +10,8 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: [ROUTES.admin, "/api/", `${ORDER_STATUS_PREFIX}/`],
+        // Bez końcowego „/”: blokuje też samą stronę /moje-zamowienia i linki logowania pod nią.
+        disallow: [ROUTES.admin, "/api/", ORDER_STATUS_PREFIX, ROUTES.myOrders],
       },
     ],
     sitemap: absoluteUrl("/sitemap.xml"),

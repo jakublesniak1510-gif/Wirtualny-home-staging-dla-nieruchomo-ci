@@ -3,8 +3,10 @@ import { BeforeAfterSlider } from "@/components/BeforeAfterSlider";
 import { CheckIcon, CrossIcon } from "@/components/CheckIcon";
 import { CtaBanner } from "@/components/CtaBanner";
 import { PageHeader } from "@/components/PageHeader";
+import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
 import { Section } from "@/components/Section";
 import { SectionHeading } from "@/components/SectionHeading";
+import { FILE_RETENTION_DAYS } from "@/content/legal";
 import { PORTFOLIO } from "@/content/portfolio";
 import {
   ACCEPTED_FORMATS_TEXT,
@@ -121,10 +123,49 @@ const WE_DONT = [
   "Nie usuwamy elementów stałych, które zostają w lokalu (np. grzejników, pionów, skosów).",
 ] as const;
 
+const CHECKLIST = [
+  "Zdjęcia są poziome, ostre i jasne – sprawdziłem je w powiększeniu.",
+  "Pionowe linie ścian i drzwi są pionowe (telefon nie był pochylony).",
+  "W każdym kadrze widać podłogę i co najmniej dwie ściany.",
+  "Okna były odsłonięte, a światła zapalone.",
+  "W kadrze nie ma dokumentów, zdjęć rodzinnych ani innych rzeczy osobistych.",
+  `Pliki to ${ACCEPTED_FORMATS_TEXT}, do ${MAX_UPLOAD_MB_TEXT} MB, min. ${MIN_PHOTO_SHORT_SIDE_PX} px na krótszym boku.`,
+  "Mam prawa do zdjęć (zrobiłem je sam albo mam zgodę fotografa).",
+  "Wiem, jaki styl wybieram, i czy potrzebuję dodatków (np. usunięcia starych mebli).",
+] as const;
+
+const AFTER_DELIVERY = [
+  {
+    title: "Najlepszy wariant – czasem dwa",
+    text: `Z ${VARIANTS_PER_PHOTO.min}–${VARIANTS_PER_PHOTO.max} wygenerowanych propozycji wybieramy najlepszą i ręcznie ją poprawiamy. Gdy dwie są równie dobre, dostaniesz obie do wyboru.`,
+  },
+  {
+    title: `${INCLUDED_REVISIONS} poprawka gratis`,
+    text: `Inny kolor sofy, mniej dekoracji, przesunięty stolik? Zgłoś to w ciągu ${REVISION_WINDOW_DAYS} dni ze strony zamówienia albo odpowiadając na e-mail z wynikami.`,
+  },
+  {
+    title: "Napis „wizualizacja”",
+    text: "Każdy plik ma dyskretne oznaczenie w prawym dolnym rogu. Publikuj je razem ze zdjęciem oryginalnym – tak jest uczciwie i bezpiecznie.",
+  },
+  {
+    title: "Pobieranie jednym kliknięciem",
+    text: "Na stronie zamówienia pobierzesz wszystkie pliki naraz jako archiwum ZIP albo każde zdjęcie osobno, w pełnej rozdzielczości.",
+  },
+  {
+    title: `${FILE_RETENTION_DAYS} dni dostępności`,
+    text: `Pliki są dostępne przez ${FILE_RETENTION_DAYS} dni od realizacji, potem automatycznie je usuwamy (RODO). Zapisz je u siebie wcześniej.`,
+  },
+  {
+    title: "Faktura e-mailem",
+    text: "Potwierdzenie płatności i – dla firm – fakturę VAT wysyłamy na adres podany w zamówieniu.",
+  },
+] as const;
+
 export default function HowItWorksPage() {
   return (
     <>
       <PageHeader
+        breadcrumbs={<Breadcrumbs items={[{ name: "Jak to działa", path: ROUTES.howItWorks }]} />}
         eyebrow="Jak to działa"
         title="Od pustego pokoju do umeblowanego zdjęcia w cztery kroki"
         description={
@@ -246,6 +287,47 @@ export default function HowItWorksPage() {
         </div>
       </Section>
 
+      <Section id="lista-kontrolna" tone="surface" labelledBy="lista-title">
+        <div className="grid gap-10 lg:grid-cols-[1fr_1.3fr] lg:items-start">
+          <SectionHeading
+            id="lista-title"
+            eyebrow="Zanim wyślesz"
+            title="Lista kontrolna przed wysłaniem zdjęć"
+            description={
+              <>
+                <p>Odhacz punkty – lista jest tylko dla Ciebie, nic nie zapisujemy. Spełnione wszystkie? Możesz zamawiać.</p>
+                <p className="mt-3 text-sm">
+                  Więcej wskazówek w artykule{" "}
+                  <Link href={ROUTES.blogPost("jak-fotografowac-puste-mieszkanie-do-wirtualnego-stagingu")} className="link">
+                    Jak fotografować puste mieszkanie do wirtualnego stagingu
+                  </Link>
+                  .
+                </p>
+              </>
+            }
+          />
+          <fieldset className="card p-6 sm:p-8">
+            <legend className="sr-only">Lista kontrolna zdjęć</legend>
+            <ul className="space-y-3">
+              {CHECKLIST.map((item, index) => (
+                <li key={item}>
+                  <label
+                    htmlFor={`lista-${index}`}
+                    className="flex cursor-pointer items-start gap-3 rounded-control p-2 text-sm leading-relaxed text-ink hover:bg-cream/70 has-[:checked]:text-muted"
+                  >
+                    <input id={`lista-${index}`} type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-brand" />
+                    <span className="[:checked+&]:line-through">{item}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <Link href={ROUTES.order} className="btn-primary mt-6 w-full sm:w-auto">
+              Wszystko gotowe – zamów
+            </Link>
+          </fieldset>
+        </div>
+      </Section>
+
       <Section tone="cream" id="co-robimy" labelledBy="zakres-title">
         <SectionHeading
           id="zakres-title"
@@ -325,6 +407,31 @@ export default function HowItWorksPage() {
             </p>
           </div>
         </div>
+      </Section>
+
+      <Section tone="cream" id="po-odbiorze" labelledBy="odbior-title">
+        <SectionHeading
+          id="odbior-title"
+          eyebrow="Po odbiorze"
+          title="Czego się spodziewać, gdy wizualizacje będą gotowe"
+          description="Dostaniesz e-mail z linkiem do strony zamówienia. Oto, co tam znajdziesz i co możesz zrobić dalej."
+        />
+        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {AFTER_DELIVERY.map((item, index) => (
+            <li key={item.title} className="card flex gap-4 p-6">
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-light text-sm font-semibold text-brand"
+                aria-hidden="true"
+              >
+                {index + 1}
+              </span>
+              <div>
+                <h3 className="font-semibold text-ink">{item.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted">{item.text}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
       </Section>
 
       <CtaBanner

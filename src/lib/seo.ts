@@ -17,6 +17,13 @@ interface PageMetadataInput {
   path: string;
   /** false = noindex (np. strony techniczne). */
   index?: boolean;
+  /** Artykuł (blog) – og:type=article z datami publikacji. */
+  article?: {
+    publishedTime: string;
+    modifiedTime?: string;
+    section?: string;
+    tags?: readonly string[];
+  };
 }
 
 /**
@@ -24,21 +31,30 @@ interface PageMetadataInput {
  * Uwaga: `openGraph` z podstrony ZASTĘPUJE ten z layoutu (płytkie scalanie),
  * dlatego powtarzamy tu obrazek, nazwę serwisu i locale.
  */
-export function pageMetadata({ title, description, path, index = true }: PageMetadataInput): Metadata {
+export function pageMetadata({ title, description, path, index = true, article }: PageMetadataInput): Metadata {
   const fullTitle = `${title} | ${SITE.name}`;
+  const common = {
+    locale: SITE.locale,
+    siteName: SITE.name,
+    title: fullTitle,
+    description,
+    url: path,
+    images: [OG_IMAGE],
+  };
   return {
     title,
     description,
     alternates: { canonical: path },
-    openGraph: {
-      type: "website",
-      locale: SITE.locale,
-      siteName: SITE.name,
-      title: fullTitle,
-      description,
-      url: path,
-      images: [OG_IMAGE],
-    },
+    openGraph: article
+      ? {
+          ...common,
+          type: "article",
+          publishedTime: article.publishedTime,
+          modifiedTime: article.modifiedTime ?? article.publishedTime,
+          section: article.section,
+          tags: article.tags ? [...article.tags] : undefined,
+        }
+      : { ...common, type: "website" },
     twitter: {
       card: "summary_large_image",
       title: fullTitle,

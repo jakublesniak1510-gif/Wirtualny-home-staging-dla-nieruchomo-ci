@@ -26,7 +26,8 @@ export interface FileAccessInput {
 
 /**
  * Admin – wszystko. Plik tymczasowy – poprawny podpis. Plik zamówienia – poprawny
- * publicToken i klucz należący do zdjęć TEGO zamówienia (oryginał lub wynik).
+ * publicToken i klucz należący do zdjęć TEGO zamówienia (oryginał, wynik główny lub wariant
+ * PhotoResult). Warianty AI (AiVariant) NIE są dostępne dla klienta.
  */
 export async function canAccessFile({ key, isAdmin, token, sig }: FileAccessInput): Promise<boolean> {
   if (isAdmin) return true;
@@ -36,8 +37,16 @@ export async function canAccessFile({ key, isAdmin, token, sig }: FileAccessInpu
   if (!token || !key.startsWith("orders/")) return false;
   const order = await prisma.order.findUnique({
     where: { publicToken: token },
-    select: { id: true, photos: { select: { originalKey: true, resultKey: true } } },
+    select: {
+      id: true,
+      photos: { select: { originalKey: true, resultKey: true, results: { select: { key: true } } } },
+    },
   });
   if (!order || !key.startsWith(`orders/${order.id}/`)) return false;
-  return order.photos.some((photo) => photo.originalKey === key || photo.resultKey === key);
+  return order.photos.some(
+    (photo) =>
+      photo.originalKey === key ||
+      photo.resultKey === key ||
+      photo.results.some((result) => result.key === key),
+  );
 }

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { BLOG_POSTS } from "@/content/blog";
 import { PRIVACY_EFFECTIVE_DATE, TERMS_EFFECTIVE_DATE } from "@/content/legal";
 import { ROUTES, absoluteUrl } from "@/lib/site";
 
@@ -21,6 +22,16 @@ const ENTRIES: readonly SitemapEntry[] = [
   { path: ROUTES.offices, priority: 0.8, changeFrequency: "monthly" },
   { path: ROUTES.portfolio, priority: 0.8, changeFrequency: "weekly" },
   { path: ROUTES.howItWorks, priority: 0.7, changeFrequency: "monthly" },
+  { path: ROUTES.comparison, priority: 0.7, changeFrequency: "monthly" },
+  { path: ROUTES.blog, priority: 0.7, changeFrequency: "weekly", lastModified: BLOG_POSTS[0]?.publishedAt },
+  ...BLOG_POSTS.map(
+    (post): SitemapEntry => ({
+      path: ROUTES.blogPost(post.slug),
+      priority: 0.6,
+      changeFrequency: "monthly",
+      lastModified: post.updatedAt ?? post.publishedAt,
+    }),
+  ),
   { path: ROUTES.faq, priority: 0.6, changeFrequency: "monthly" },
   { path: ROUTES.contact, priority: 0.5, changeFrequency: "yearly" },
   { path: ROUTES.terms, priority: 0.2, changeFrequency: "yearly", lastModified: TERMS_EFFECTIVE_DATE },

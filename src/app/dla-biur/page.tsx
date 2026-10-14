@@ -4,6 +4,7 @@ import { CheckIcon } from "@/components/CheckIcon";
 import { ContactForm } from "@/components/ContactForm";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import { PageHeader } from "@/components/PageHeader";
+import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
 import { Section } from "@/components/Section";
 import { SectionHeading } from "@/components/SectionHeading";
 import { Steps } from "@/components/Steps";
@@ -129,6 +130,7 @@ export default function OfficesPage() {
   return (
     <>
       <PageHeader
+        breadcrumbs={<Breadcrumbs items={[{ name: "Dla biur", path: ROUTES.offices }]} />}
         eyebrow="Dla biur nieruchomości i deweloperów"
         title="Wirtualny home staging w abonamencie dla całego zespołu"
         description={

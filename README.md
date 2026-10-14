@@ -15,8 +15,10 @@ Biznesowe tło, ceny, ryzyka i plan na pierwsze 2 tygodnie opisuje **[docs/PROPO
 7. [Hasło administratora](#hasło-administratora)
 8. [Podmiana treści](#podmiana-treści) – portfolio, opinie, dane firmy, ceny
 9. [Dzienna obsługa zamówień](#dzienna-obsługa-zamówień)
-10. [Lista kontrolna przed startem](#lista-kontrolna-przed-startem)
-11. [Znane ograniczenia](#znane-ograniczenia)
+10. [Generowanie wariantów AI](#generowanie-wariantów-ai)
+11. [Panel admina – dashboard, poprawki, polecenia](#panel-admina--dashboard-poprawki-polecenia)
+12. [Lista kontrolna przed startem](#lista-kontrolna-przed-startem)
+13. [Znane ograniczenia](#znane-ograniczenia)
 
 ---
 
@@ -214,17 +216,79 @@ W `src/content/testimonials.ts` zastąp przykładowe opinie prawdziwymi (imię i
 
 1. **Powiadomienie**: po opłaceniu zamówienia dostajesz e-mail na `EMAIL_ADMIN`. Zamówienie ma status „opłacone”.
 2. **Panel**: wejdź na `/admin`, zaloguj się. Lista pokazuje zamówienia od najnowszych – zacznij od ekspresów i abonamentów (krótszy termin).
-3. **Szczegóły zamówienia**: kliknij zamówienie – zobaczysz styl, dodatki, uwagi klienta i oryginalne zdjęcia. Pobierz oryginały (pojedynczo lub jako ZIP) i zmień status na „w realizacji”.
+3. **Szczegóły zamówienia**: kliknij zamówienie – zobaczysz styl, dodatki, uwagi klienta, termin z odliczaniem i oryginalne zdjęcia. Status „w realizacji” ustawia się sam przy pierwszym wyniku (klient dostaje e-mail „pracujemy nad zamówieniem”); możesz go też ustawić ręcznie.
 4. **Kontrola zdjęć**: jeśli zdjęcie jest za ciemne, rozmyte albo nie pokazuje pomieszczenia – napisz do klienta, zanim zaczniesz (lepsze ujęcie albo zwrot za to zdjęcie; zwrot zrobisz w Dashboardzie Stripe: Payments → płatność → *Refund*).
-5. **Praca**: dla każdego zdjęcia wygeneruj 2–4 warianty w wybranym narzędziu AI, wybierz najlepszy i popraw detale (proporcje mebli, cienie, krawędzie). Pilnuj zasad: **żadnego ukrywania wad, zmiany metrażu, okien ani układu**.
-6. **Wgranie wyników**: w szczegółach zamówienia wgraj gotowy plik przy każdym zdjęciu. Znak „wizualizacja” nakłada się automatycznie – nie dodawaj go ręcznie.
+5. **Praca**: przy każdym zdjęciu kliknij „Generuj warianty” (patrz „Generowanie wariantów AI”), obejrzyj je w porównaniu z oryginałem i wybierz najlepszy jako wynik główny; drugi dobry wariant możesz dodać jako „wariant dla klienta”. Jeśli wolisz zewnętrzne narzędzie lub retusz w edytorze – wgraj gotowe pliki ręcznie (pojedynczo albo zbiorczo dla całego zamówienia; pliki z numerami `01`, `02`… dopasują się same). Pilnuj zasad: **żadnego ukrywania wad, zmiany metrażu, okien ani układu**.
+6. **Znak wodny**: „wizualizacja” nakłada się automatycznie na każdy publikowany wynik – nie dodawaj go ręcznie.
 7. **Wysyłka**: gdy wszystkie wyniki są wgrane, zmień status na „gotowe” / wyślij e-mail „gotowe” – klient dostaje link do pobrania.
-8. **Poprawki**: klient odpisuje na e-mail (1 poprawka w 7 dni w cenie). Wgraj poprawioną wersję w tym samym zamówieniu.
-9. **Zgłoszenia z formularzy**: `/admin/zgloszenia` – wiadomości z `/kontakt` (typ „contact”) i zapytania biur z `/dla-biur` (typ „office”). Odpowiadaj w ciągu dnia roboczego. Uwaga: na razie nie przychodzi o nich e-mail – zaglądaj do panelu codziennie (patrz „Znane ograniczenia”).
-10. **Kody pakietów i nagrody za polecenia**: `/admin/kody` – tworzysz kod z liczbą kredytów (np. dla biura po opłaceniu faktury albo 5 zdjęć za polecenie) i wysyłasz go klientowi e-mailem.
-11. **Faktury**: zamówienia z NIP-em – wystaw fakturę w swoim programie i wyślij e-mailem.
+8. **Poprawki**: klient zgłasza je formularzem na stronie zamówienia (1 runda w 7 dni w cenie); dostajesz e-mail, a zgłoszenia widzisz w `/admin/poprawki` i w szczegółach zamówienia. Wgraj poprawioną wersję przy zdjęciu, wpisz krótką odpowiedź i oznacz zgłoszenie jako „gotowe” – klient dostanie e-mail.
+9. **Zgłoszenia z formularzy**: o każdej wiadomości z `/kontakt` i `/dla-biur` dostajesz e-mail; wszystkie są też w `/admin/zgloszenia`. Odpowiadaj w ciągu dnia roboczego.
+10. **Kody pakietów**: `/admin/kody` – tworzysz kod z liczbą kredytów (np. dla biura po opłaceniu faktury) i wysyłasz go klientowi e-mailem; klient widzi swoje kody także w „Moje zamówienia”.
+11. **Nagrody za polecenia**: `/admin/polecenia` – gdy polecony klient opłaci pierwsze zamówienie, kliknij „Wydaj nagrodę”; kod na 5 zdjęć powstaje i wychodzi do polecającego automatycznie.
+12. **Faktury**: zamówienia z NIP-em – wystaw fakturę w swoim programie i wyślij e-mailem.
 
 Raz w tygodniu: sprawdź w Stripe wypłaty i ewentualne nieudane płatności, a w panelu – zamówienia, które utknęły w statusie „w realizacji”.
+
+---
+
+## Generowanie wariantów AI
+
+Panel potrafi wygenerować warianty wizualizacji jednym kliknięciem – bez przełączania się do zewnętrznych narzędzi. Cel: z ok. 10 minut pracy na zdjęcie zejść do ok. 2 minut (wybór najlepszego wariantu + ewentualna drobna poprawka).
+
+### Jak to działa
+
+1. Serwer bierze oryginał zdjęcia, zmniejsza go (dłuższy bok `AI_MAX_INPUT_SIDE`, domyślnie 2048 px, usuwa metadane z GPS) i wysyła do wybranego dostawcy razem z promptem.
+2. Prompt (po angielsku, edytowalny w panelu) składa się automatycznie ze stylu zamówienia (`src/lib/styles.ts` – nazwa, paleta), dodatków (usunięcie mebli, wirtualny remont, noc → dzień) i uwag klienta. Na końcu zawsze są **twarde zasady uczciwości**: ściany, okna, drzwi, sufit, geometria i perspektywa bez zmian, żadnego dodawania/usuwania okien i drzwi, żadnego ukrywania wad (pęknięcia, plamy, wilgoć), meble w realnej skali. Kod: `src/lib/ai/prompt.ts`.
+3. Wynik jest dopasowywany do proporcji oryginału i zapisywany jako **wariant AI bez znaku wodnego** (widzi go tylko operator, plik `orders/<id>/ai/<wariant>.jpg`).
+4. Gdy klikniesz „Ustaw jako wynik główny” albo „Dodaj jako wariant dla klienta”, serwer nakłada znak wodny „wizualizacja” i dopiero wtedy wynik trafia do klienta.
+
+Generowanie działa w tle: przycisk od razu wraca, a strona co 3 s sprawdza postęp (maks. 2 generowania naraz na serwer). Pojedyncze wywołanie API ma limit 120 s.
+
+### Klucze API – wystarczy jeden dostawca
+
+| Dostawca | Gdzie po klucz | Zmienne | Orientacyjny koszt za 1 wariant* |
+|---|---|---|---|
+| **Replicate** – FLUX Kontext Pro (domyślny) | <https://replicate.com/account/api-tokens> (konto + karta w *Billing*) | `REPLICATE_API_TOKEN`, opcjonalnie `REPLICATE_MODEL` | ok. 0,04 USD ≈ 0,16 zł |
+| **OpenAI** – gpt-image-1 | <https://platform.openai.com/api-keys> (doładuj saldo w *Billing*; organizacja może wymagać weryfikacji, by używać modeli obrazu) | `OPENAI_API_KEY`, `OPENAI_IMAGE_MODEL`, opcjonalnie `OPENAI_IMAGE_QUALITY` | low ≈ 0,02 USD, medium ≈ 0,06 USD, high ≈ 0,25 USD (≈ 0,08–1,00 zł) |
+| **Google Gemini** – „Nano Banana” | <https://aistudio.google.com/apikey> (płatny poziom w Google AI Studio) | `GEMINI_API_KEY`, `GEMINI_IMAGE_MODEL` | ok. 0,04 USD ≈ 0,16 zł |
+
+\* **Sprawdź aktualny cennik dostawcy** – ceny i nazwy modeli zmieniają się często. Panel liczy koszt orientacyjnie (stałe w `src/lib/ai/*.ts`) i pokazuje sumę z 30 dni na pulpicie. Przy 3 wariantach na zdjęcie koszt AI to zwykle 0,5–3 zł – ułamek ceny zdjęcia (29–39 zł).
+
+Konfiguracja:
+
+1. Wpisz klucz do `.env` (lokalnie) albo w zmiennych środowiskowych hostingu, ustaw `AI_PROVIDER` na `replicate`, `openai` lub `gemini` i uruchom serwer ponownie.
+2. W `/admin/ustawienia` sprawdzisz, którzy dostawcy są skonfigurowani (kluczy nie pokazujemy).
+3. Bez żadnego klucza panel działa jak dotąd – przycisk „Generuj warianty” jest wyłączony z komunikatem „Skonfiguruj klucz API w .env”, a wyniki wgrywasz ręcznie.
+
+Integracje są napisane według dokumentacji dostawców (linki w komentarzach w `src/lib/ai/replicate.ts`, `openai.ts`, `gemini.ts`). **Przed startem zrób jedno testowe generowanie u wybranego dostawcy** – jeśli API zmieniło format, panel pokaże czytelny błąd przy wariancie. Przed użyciem sprawdź też regulamin dostawcy (użytek komercyjny, brak trenowania na zdjęciach klientów) i dopisz go do polityki prywatności, jeśli zaleci to prawnik.
+
+### Praca operatora krok po kroku (nowy panel)
+
+1. `/admin` → kafelek **Do zrobienia** → otwórz zamówienie (najpierw ekspresy i te z czerwonym terminem).
+2. W nagłówku masz wszystko: klienta, styl, dodatki, odliczanie do terminu, uwagi klienta i **notatki wewnętrzne** (zapisują się same).
+3. Przy każdym zdjęciu: przejrzyj prompt (w razie potrzeby dopisz np. „living room with a dining table”), wybierz dostawcę i liczbę wariantów → **Generuj warianty**. Możesz od razu przejść do kolejnego zdjęcia – generowanie trwa w tle.
+4. Kliknij miniaturę wariantu – otworzy się porównanie z oryginałem. Sprawdź okna, drzwi, ściany i widoczność wad.
+5. Najlepszy wariant → **Ustaw jako wynik główny**. Inne dobre warianty → **Dodaj jako wariant dla klienta** (z etykietą, np. „Wariant jasny”). Złe → **Usuń**. Zamówienie samo przechodzi z „opłacone” na „w realizacji” (klient dostaje e-mail).
+6. Jeśli wariant wymaga retuszu: pobierz go linkiem **Pobierz** pod miniaturą (plik bez znaku wodnego), popraw w edytorze i wgraj przyciskiem **Podmień wynik** albo **Wgraj dodatkowy wariant**. Wiele gotowych plików naraz wgrasz w sekcji **Upload zbiorczy** – pliki z numerem w nazwie (`01.jpg`, `salon-02.png`) dopasujemy do zdjęć po numerze, inne po kolejności nazw; przed zatwierdzeniem zobaczysz podgląd przypisań i możesz je zmienić.
+7. Gdy wszystkie zdjęcia mają wynik główny → **Wyślij maila: gotowe** (jak dotąd).
+
+### Generowanie w tle a hosting serverless
+
+Kolejka generowania działa w pamięci procesu serwera (`src/lib/ai/queue.ts`) i jest uruchamiana przez `after()` z Next.js – na Vercel funkcja żyje do końca generowania (w granicach `maxDuration` = 300 s; plan Hobby ma niższy limit). Jeśli proces zostanie zatrzymany w trakcie (restart, wdrożenie, przekroczony czas), warianty zostaną w stanie „w toku” – po 15 minutach panel oznaczy je jako błąd z prośbą o ponowne wygenerowanie. Gdy to się powtarza, ustaw `AI_SYNC=1`: przycisk będzie wtedy czekał na wynik (do ok. 2 min na wariant), ale nic nie zginie. Na zwykłym serwerze Node (Railway, VPS) tryb w tle działa bez ograniczeń.
+
+---
+
+## Panel admina – dashboard, poprawki, polecenia
+
+| Adres | Co tam jest |
+|---|---|
+| `/admin` | **Pulpit**: kafelki – zamówienia do zrobienia (opłacone + w realizacji), po terminie, otwarte poprawki, przychód z 30 dni, średni czas realizacji (opłacenie → dostarczenie) z 30 dni, koszt AI z 30 dni. Pod spodem lista zamówień z kolumnami „Poprawki” (otwarte zgłoszenia) i „AI” (liczba wariantów). |
+| `/admin/zamowienia/<id>` | **Stanowisko pracy** (opis wyżej) + sekcja **Poprawki** tego zamówienia: treść zgłoszenia, zmiana statusu (w realizacji / zrobione / odrzuć) i odpowiedź dla klienta. Po zamknięciu zgłoszenia klient dostaje e-mail. |
+| `/admin/poprawki` | Wszystkie otwarte zgłoszenia poprawek od najstarszego, z linkiem do zamówienia („Pokaż wszystkie” – także zamknięte). |
+| `/admin/polecenia` | Opłacone zamówienia z kodem polecenia, pogrupowane po kodzie (e-mail polecającego): liczba poleconych zamówień i czy nagroda została wydana. **Wydaj nagrodę** tworzy kod pakietu na 5 zdjęć (`REFERRAL_REWARD_PHOTOS` w `pricing.ts`), oznacza polecenia jako nagrodzone i wysyła polecającemu e-mail z kodem. Samopolecenia (ten sam e-mail) się nie liczą. |
+| `/admin/ustawienia` | Podgląd konfiguracji (tylko odczyt): dostawcy AI, Stripe, Resend, magazyn plików, sekrety, wersja aplikacji. Kluczy nie wyświetlamy. |
+
+Bezpieczeństwo panelu: sesja w ciasteczku HttpOnly `SameSite=Lax` (7 dni, odnawiana automatycznie przy korzystaniu z panelu), trasy `/api/admin/**` odrzucają żądania zmieniające dane z innej domeny (sprawdzanie nagłówka `Origin` – ochrona CSRF), a cała strona wysyła nagłówki `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` i – przy adresie https – `Strict-Transport-Security`.
 
 ---
 
@@ -248,10 +312,10 @@ Raz w tygodniu: sprawdź w Stripe wypłaty i ewentualne nieudane płatności, a 
 
 ## Znane ograniczenia
 
-- **Brak powiadomień e-mail o wiadomościach z formularzy** `/kontakt` i `/dla-biur` – zgłoszenia zapisują się w bazie i są widoczne w panelu; w kodzie (`src/app/api/contact/route.ts`) jest oznaczone miejsce do podpięcia wysyłki.
 - **Abonament i pakiety są obsługiwane ręcznie**: zapytanie przychodzi z formularza, fakturę wystawiasz sam, kod tworzysz w panelu. Kreator zamówienia nalicza dodatki także przy kodzie – klienci abonamentowi opisują dodatki w uwagach (a Ty ich nie doliczasz). Automatyczny abonament (Stripe Subscriptions) to możliwy kolejny krok.
-- **Program poleceń** tylko zapisuje kod polecenia w zamówieniu – nagrodę przyznajesz ręcznie.
-- **Brak kont klientów** – dostęp do zamówienia daje prywatny link z e-maila. Kto ma link, widzi zamówienie; nie publikuj go.
+- **Program poleceń** – nagrodę wydajesz jednym kliknięciem w `/admin/polecenia`, ale decyzję podejmujesz Ty (system nie wydaje jej sam).
+- **Brak haseł klientów** – dostęp do zamówienia daje prywatny link z e-maila, a do listy zamówień jednorazowy link logowania („Moje zamówienia”). Kto ma link do zamówienia, widzi je; nie publikuj go.
+- **Generowanie AI** nie było testowane z prawdziwymi kluczami dostawców – przed startem zrób jedno próbne generowanie (patrz „Generowanie wariantów AI”).
 - **Faktury VAT** nie są generowane automatycznie.
 - **Limit wiadomości z formularza kontaktowego** (10 na 10 minut z jednego adresu IP) liczony jest w pamięci serwera – przy kilku instancjach (np. serverless) każda liczy osobno. Do małego ruchu to wystarcza.
 - **Ilustracje portfolio** są poglądowe (SVG) – podmień je na prawdziwe realizacje jak najszybciej, bo to one sprzedają.

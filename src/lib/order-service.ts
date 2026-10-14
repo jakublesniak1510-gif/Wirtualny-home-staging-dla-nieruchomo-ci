@@ -3,10 +3,11 @@ import { prisma } from "@/lib/db";
 import {
   adminNewOrderEmail,
   orderConfirmationEmail,
+  orderInProgressEmail,
   orderReadyEmail,
   sendEmail,
 } from "@/lib/email";
-import type { EmailOrder } from "@/lib/email";
+import type { EmailOrder, EmailResult } from "@/lib/email";
 import { ImageValidationError, inspectImage } from "@/lib/images";
 import type { ImageInfo } from "@/lib/images";
 import {
@@ -365,6 +366,7 @@ export function toEmailOrder(order: Order): EmailOrder {
     deadline: getDeadline(order),
     isSample: order.isSample,
     notes: order.notes,
+    deliveredAt: order.deliveredAt,
   };
 }
 
@@ -396,4 +398,27 @@ export async function deliverOrder(orderId: string): Promise<Order> {
     throw new OrderError(502, `Status zmieniony na „Dostarczone”, ale e-mail nie wyszedł: ${sent.error ?? "błąd"}.`);
   }
   return updated;
+}
+
+export interface NotifyResult extends EmailResult {
+  /** Powód pominięcia wysyłki (wtedy ok = false i nic nie wysłano). */
+  skipped?: "not-found" | "wrong-status";
+}
+
+/**
+ * E-mail „Pracujemy nad Twoim zamówieniem” (przejście PAID → IN_PROGRESS).
+ *
+ * KONTRAKT (idempotentność po stronie wywołującego): wywołaj RAZ, zaraz po zmianie statusu
+ * na IN_PROGRESS i tylko wtedy, gdy status PRZED zmianą był PAID (np. w panelu:
+ * `updateMany({ where: { id, status: "PAID" }, data: { status: "IN_PROGRESS" } })` i wysyłka,
+ * gdy `count === 1`). Funkcja sama sprawdza jedynie, że zamówienie ma teraz status IN_PROGRESS.
+ * Nie rzuca wyjątków – zwraca wynik wysyłki.
+ */
+export async function notifyOrderInProgress(orderId: string): Promise<NotifyResult> {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) return { ok: false, skipped: "not-found", error: "Nie znaleziono zamówienia." };
+  if (order.status !== "IN_PROGRESS") {
+    return { ok: false, skipped: "wrong-status", error: "Zamówienie nie ma statusu „W realizacji”." };
+  }
+  return sendEmail(orderInProgressEmail(toEmailOrder(order)));
 }

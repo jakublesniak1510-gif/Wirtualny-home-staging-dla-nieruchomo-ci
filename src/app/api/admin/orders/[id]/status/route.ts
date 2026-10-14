@@ -1,5 +1,6 @@
-import { adminUnauthorized, isAdminRequest } from "@/lib/admin-auth";
+import { adminGuard } from "@/lib/admin-auth";
 import { handleRouteError, jsonError, readJson, validationError } from "@/lib/api";
+import { notifyOrderInProgressSafe } from "@/lib/admin-notify";
 import { prisma } from "@/lib/db";
 import { cancelOrder } from "@/lib/order-service";
 import { adminStatusSchema } from "@/lib/validation";
@@ -12,7 +13,8 @@ export const dynamic = "force-dynamic";
  * (do tego służy /deliver).
  */
 export async function POST(request: Request, ctx: RouteContext<"/api/admin/orders/[id]/status">) {
-  if (!isAdminRequest(request)) return adminUnauthorized();
+  const denied = adminGuard(request);
+  if (denied) return denied;
   const { id } = await ctx.params;
   const parsed = adminStatusSchema.safeParse(await readJson(request));
   if (!parsed.success) return validationError(parsed.error);
@@ -36,6 +38,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/admin/order
         deliveredAt: status === "DELIVERED" ? (order.deliveredAt ?? new Date()) : order.deliveredAt,
       },
     });
+    if (status === "IN_PROGRESS" && order.status === "PAID") await notifyOrderInProgressSafe(id);
     return Response.json({ status });
   } catch (error) {
     return handleRouteError(error, "Zmiana statusu");

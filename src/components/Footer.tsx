@@ -7,12 +7,15 @@ const SERVICE_LINKS = [
   { label: "Darmowa próbka", href: ROUTES.freeSample },
   { label: "Cennik", href: ROUTES.pricing },
   { label: "Dla biur nieruchomości", href: ROUTES.offices },
+  { label: "Moje zamówienia", href: ROUTES.myOrders },
 ] as const;
 
 const INFO_LINKS = [
   { label: "Jak to działa", href: ROUTES.howItWorks },
   { label: "Portfolio", href: ROUTES.portfolio },
   { label: "FAQ", href: ROUTES.faq },
+  { label: "Porównanie z innymi opcjami", href: ROUTES.comparison },
+  { label: "Blog", href: ROUTES.blog },
   { label: "Kontakt", href: ROUTES.contact },
 ] as const;
 

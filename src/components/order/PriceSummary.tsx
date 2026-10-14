@@ -4,8 +4,10 @@ import type { PriceBreakdown } from "@/lib/pricing";
 
 interface PriceSummaryProps {
   breakdown: PriceBreakdown;
-  /** Liczba faktycznie dodanych zdjęć (0 = cena poglądowa dla 1 zdjęcia). */
+  /** Liczba faktycznie dodanych zdjęć (0 = cena poglądowa). */
   photoCount: number;
+  /** Planowana liczba zdjęć z kalkulatora (gdy jeszcze nic nie wgrano). */
+  plannedPhotoCount?: number;
   styleName: string;
   turnaroundHours: number;
 }
@@ -20,7 +22,7 @@ function Row({ label, value, muted = false }: { label: string; value: string; mu
 }
 
 /** Podsumowanie ceny liczone na żywo z calculateOrderPrice. */
-export function PriceSummary({ breakdown, photoCount, styleName, turnaroundHours }: PriceSummaryProps) {
+export function PriceSummary({ breakdown, photoCount, plannedPhotoCount, styleName, turnaroundHours }: PriceSummaryProps) {
   const toBulk = BULK_THRESHOLD - photoCount;
   return (
     <div>
@@ -63,7 +65,11 @@ export function PriceSummary({ breakdown, photoCount, styleName, turnaroundHours
       </div>
 
       {photoCount === 0 && (
-        <p className="mt-3 text-xs text-muted">Cena poglądowa dla 1 zdjęcia – dodaj zdjęcia, aby zobaczyć kwotę zamówienia.</p>
+        <p className="mt-3 text-xs text-muted">
+          {plannedPhotoCount
+            ? `Cena poglądowa dla ${formatPhotoCount(plannedPhotoCount)} – wgraj zdjęcia, aby zobaczyć kwotę zamówienia.`
+            : "Cena poglądowa dla 1 zdjęcia – dodaj zdjęcia, aby zobaczyć kwotę zamówienia."}
+        </p>
       )}
       {breakdown.bulkApplied ? (
         <p className="mt-3 rounded-control bg-brand-light px-3 py-2 text-sm text-brand">

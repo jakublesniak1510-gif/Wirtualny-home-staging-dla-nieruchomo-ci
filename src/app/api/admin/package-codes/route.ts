@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { adminUnauthorized, isAdminRequest } from "@/lib/admin-auth";
+import { adminGuard } from "@/lib/admin-auth";
 import { handleRouteError, jsonError, readJson, validationError } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { generatePackageCode } from "@/lib/orders";
@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/admin/package-codes – lista kodów (najnowsze pierwsze). */
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) return adminUnauthorized();
+  const denied = adminGuard(request);
+  if (denied) return denied;
   const codes = await prisma.packageCode.findMany({ orderBy: { createdAt: "desc" }, take: 500 });
   return Response.json({ codes });
 }
@@ -19,7 +20,8 @@ export async function GET(request: Request) {
  * → 201 { code } (kod generowany w formacie WS-XXXX-XXXX).
  */
 export async function POST(request: Request) {
-  if (!isAdminRequest(request)) return adminUnauthorized();
+  const denied = adminGuard(request);
+  if (denied) return denied;
   const body = await readJson(request);
   if (body === null) return jsonError(400, "Nieprawidłowe dane.");
   const parsed = packageCodeCreateSchema.safeParse(body);

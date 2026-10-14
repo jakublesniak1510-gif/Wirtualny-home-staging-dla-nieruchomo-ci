@@ -7,6 +7,7 @@ import { FAQ, FAQ_CATEGORIES, getFaqByCategory } from "@/content/faq";
 import { SUPPORT_HOURS } from "@/content/service";
 import { pageMetadata } from "@/lib/seo";
 import { ROUTES, SITE } from "@/lib/site";
+import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
 
 export const metadata = pageMetadata({
   title: "FAQ – najczęstsze pytania o wirtualny home staging",
@@ -25,6 +26,7 @@ export default function FaqPage() {
     <>
       <JsonLd data={faqPageJsonLd(FAQ)} />
       <PageHeader
+        breadcrumbs={<Breadcrumbs items={[{ name: "FAQ", path: ROUTES.faq }]} />}
         eyebrow="FAQ"
         title="Najczęstsze pytania"
         description={

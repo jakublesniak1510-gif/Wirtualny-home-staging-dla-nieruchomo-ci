@@ -6,6 +6,8 @@ import { RetryPaymentButton } from "@/components/order/RetryPaymentButton";
 import { prisma } from "@/lib/db";
 import { MIN_SHORT_SIDE, getMaxUploadMb } from "@/lib/images";
 import { getOrderNumber } from "@/lib/orders";
+import { MAX_PHOTOS, isAddonSlug } from "@/lib/pricing";
+import type { AddonSlug } from "@/lib/pricing";
 import { ROUTES, SITE } from "@/lib/site";
 import { isStripeConfigured } from "@/lib/stripe";
 import { DEFAULT_STYLE, isStyleSlug } from "@/lib/styles";
@@ -58,6 +60,16 @@ export default async function OrderPage({ searchParams }: PageProps<"/zamow">) {
   const requested = first(params.styl);
   const initialStyle = requested && isStyleSlug(requested) ? requested : DEFAULT_STYLE;
   const cancelled = first(params.anulowano) === "1";
+  const initialAddons = (first(params.dodatki) ?? "")
+    .split(",")
+    .map((slug) => slug.trim())
+    .filter((slug): slug is AddonSlug => isAddonSlug(slug));
+  const initialExpress = first(params.ekspres) === "1";
+  const initialReferralCode = (first(params.polecenie) ?? "").trim().slice(0, 254);
+  const initialPackageCode = (first(params.kod) ?? "").trim().toUpperCase().slice(0, 40);
+  const plannedRaw = Number.parseInt(first(params.zdjecia) ?? "", 10);
+  const plannedPhotoCount =
+    Number.isInteger(plannedRaw) && plannedRaw >= 1 && plannedRaw <= MAX_PHOTOS ? plannedRaw : undefined;
 
   return (
     <div className="container-x pb-28 pt-10 sm:pt-14 lg:pb-20">
@@ -74,6 +86,11 @@ export default async function OrderPage({ searchParams }: PageProps<"/zamow">) {
       {cancelled && <CancelledBanner token={first(params.zamowienie)} />}
       <OrderWizard
         initialStyle={initialStyle}
+        initialAddons={initialAddons}
+        initialExpress={initialExpress}
+        initialReferralCode={initialReferralCode}
+        initialPackageCode={initialPackageCode}
+        plannedPhotoCount={plannedPhotoCount}
         maxMb={getMaxUploadMb()}
         minShortSide={MIN_SHORT_SIDE}
         paymentsEnabled={isStripeConfigured()}

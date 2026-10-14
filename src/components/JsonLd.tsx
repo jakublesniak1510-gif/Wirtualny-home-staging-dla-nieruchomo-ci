@@ -85,3 +85,71 @@ export function faqPageJsonLd(items: readonly FaqItem[]): JsonLdData {
 export function OrganizationJsonLd() {
   return <JsonLd data={organizationJsonLd()} />;
 }
+
+export interface BreadcrumbItem {
+  name: string;
+  /** Ścieżka, np. ROUTES.blog. */
+  path: string;
+}
+
+/** BreadcrumbList – ścieżka okruszków (Strona główna → … → bieżąca strona). */
+export function breadcrumbJsonLd(items: readonly BreadcrumbItem[]): JsonLdData {
+  const all: readonly BreadcrumbItem[] = [{ name: "Strona główna", path: ROUTES.home }, ...items];
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: all.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
+}
+
+/** Okruszki jako JSON-LD (bez widocznego elementu) – <BreadcrumbJsonLd items={[{ name: "Cennik", path: ROUTES.pricing }]} />. */
+export function BreadcrumbJsonLd({ items }: { items: readonly BreadcrumbItem[] }) {
+  return <JsonLd data={breadcrumbJsonLd(items)} />;
+}
+
+export interface ArticleJsonLdInput {
+  title: string;
+  description: string;
+  path: string;
+  /** RRRR-MM-DD */
+  publishedAt: string;
+  updatedAt?: string;
+  imagePath: string;
+  section?: string;
+  keywords?: readonly string[];
+  wordCount?: number;
+}
+
+/** Article (BlogPosting) – do strony artykułu. */
+export function articleJsonLd(input: ArticleJsonLdInput): JsonLdData {
+  const siteUrl = getSiteUrl();
+  const url = absoluteUrl(input.path);
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "@id": `${url}#artykul`,
+    headline: input.title,
+    description: input.description,
+    url,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    datePublished: input.publishedAt,
+    dateModified: input.updatedAt ?? input.publishedAt,
+    inLanguage: "pl-PL",
+    image: [absoluteUrl(input.imagePath), absoluteUrl("/og.png")],
+    author: { "@type": "Organization", name: SITE.name, url: `${siteUrl}/` },
+    publisher: {
+      "@type": "Organization",
+      "@id": `${siteUrl}/#organizacja`,
+      name: SITE.name,
+      logo: { "@type": "ImageObject", url: absoluteUrl("/icon.svg") },
+    },
+    ...(input.section ? { articleSection: input.section } : {}),
+    ...(input.keywords && input.keywords.length > 0 ? { keywords: input.keywords.join(", ") } : {}),
+    ...(input.wordCount ? { wordCount: input.wordCount } : {}),
+  };
+}

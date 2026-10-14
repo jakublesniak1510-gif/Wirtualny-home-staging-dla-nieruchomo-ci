@@ -6,17 +6,25 @@ import { FaqAccordion } from "@/components/FaqAccordion";
 import { PriceTable } from "@/components/PriceTable";
 import { Section } from "@/components/Section";
 import { SectionHeading } from "@/components/SectionHeading";
-import { Steps } from "@/components/Steps";
 import type { Step } from "@/components/Steps";
-import { StyleCard } from "@/components/StyleCard";
 import { OrganizationJsonLd } from "@/components/JsonLd";
+import { AudienceCards } from "@/components/marketing/AudienceCards";
+import { ComparisonTable } from "@/components/marketing/ComparisonTable";
+import { HeroComparison } from "@/components/marketing/HeroComparison";
+import { ProcessPreview } from "@/components/marketing/ProcessPreview";
+import { Reveal } from "@/components/marketing/Reveal";
+import { SavingsCalculator } from "@/components/marketing/SavingsCalculator";
+import { StyleSwitcher } from "@/components/marketing/StyleSwitcher";
+import { TrustBar } from "@/components/marketing/TrustBar";
+import { BLOG_POSTS, getCategoryLabel } from "@/content/blog";
 import { FAQ_HOME } from "@/content/faq";
 import { PORTFOLIO } from "@/content/portfolio";
 import { HAS_PLACEHOLDER_TESTIMONIALS, TESTIMONIALS } from "@/content/testimonials";
-import { formatPLNShort, formatPhotoCount } from "@/lib/format";
+import { formatDatePL, formatPLNShort, formatPhotoCount } from "@/lib/format";
 import {
   BULK_THRESHOLD,
   FREE_SAMPLE_PHOTOS,
+  INCLUDED_REVISIONS,
   MAX_PHOTOS,
   OFFICE_PLAN,
   OFFICE_PLAN_APPROX_NET_PER_PHOTO,
@@ -31,7 +39,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-const HERO = PORTFOLIO[0];
 const GALLERY = PORTFOLIO.slice(1, 5);
 
 const STEPS: readonly Step[] = [
@@ -55,10 +62,15 @@ const STEPS: readonly Step[] = [
 
 const STATS = [
   { value: `${SITE.turnaroundHours} h`, label: "na gotowe wizualizacje" },
-  { value: String(STYLES.length), label: "stylów aranżacji do wyboru" },
+  { value: `${STYLES.length} stylów`, label: "aranżacji do wyboru" },
   { value: `od ${formatPLNShort(PRICE_BULK)}`, label: `za zdjęcie przy ${BULK_THRESHOLD}+ zdjęciach` },
-  { value: formatPhotoCount(FREE_SAMPLE_PHOTOS), label: "gratis na próbę dla agentów" },
+  {
+    value: `${INCLUDED_REVISIONS} ${INCLUDED_REVISIONS === 1 ? "poprawka" : "poprawki"}`,
+    label: "gratis dla każdego zdjęcia",
+  },
 ] as const;
+
+const LATEST_POSTS = BLOG_POSTS.slice(0, 3);
 
 const BENEFITS = [
   {
@@ -81,6 +93,17 @@ const HONESTY_RULES = [
   "Zalecamy publikowanie w ogłoszeniu również zdjęcia oryginalnego.",
   "Pracujemy wyłącznie na zdjęciach, do których masz prawa.",
 ] as const;
+
+function StepIcon({ index }: { index: number }) {
+  return (
+    <span
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-base font-semibold text-white"
+      aria-hidden="true"
+    >
+      {index + 1}
+    </span>
+  );
+}
 
 function CheckIcon({ className = "" }: { className?: string }) {
   return (
@@ -140,29 +163,17 @@ export default function HomePage() {
             </ul>
           </div>
 
-          <figure>
-            <BeforeAfterSlider
-              beforeSrc={HERO.beforeSrc}
-              afterSrc={HERO.afterSrc}
-              beforeAlt={HERO.beforeAlt}
-              afterAlt={HERO.afterAlt}
-              label={`Porównanie przed i po: ${HERO.title.toLowerCase()}, styl ${getStyleName(HERO.slug).toLowerCase()}`}
-              initial={45}
-              priority
-              sizes="(min-width: 1024px) 600px, 100vw"
-            />
-            <figcaption className="mt-3 text-center text-sm text-muted">
-              Przesuń suwak, aby porównać. {HERO.room}, {HERO.area}&nbsp;m², styl{" "}
-              {getStyleName(HERO.slug).toLowerCase()} (ilustracja poglądowa).
-            </figcaption>
-          </figure>
+          <HeroComparison />
         </div>
       </section>
 
       {/* LICZBY / ZAUFANIE */}
-      <section aria-label="Najważniejsze fakty" className="border-y border-line bg-surface">
+      <section aria-labelledby="fakty-title" className="border-y border-line bg-surface">
+        <h2 id="fakty-title" className="sr-only">
+          Najważniejsze fakty
+        </h2>
         <div className="container-x">
-          <dl className="grid grid-cols-2 divide-line py-8 lg:grid-cols-4 lg:divide-x">
+          <dl className="grid grid-cols-2 divide-line pt-8 lg:grid-cols-4 lg:divide-x">
             {STATS.map((stat) => (
               <div key={stat.label} className="flex flex-col-reverse px-4 py-3 text-center">
                 <dt className="mt-1 text-sm text-muted">{stat.label}</dt>
@@ -170,6 +181,9 @@ export default function HomePage() {
               </div>
             ))}
           </dl>
+          <div className="mt-6 border-t border-line py-8">
+            <TrustBar />
+          </div>
         </div>
       </section>
 
@@ -197,27 +211,63 @@ export default function HomePage() {
             id="jak-title"
             eyebrow="Jak to działa"
             title="Cztery kroki, zero formalności"
-            description="Całe zamówienie złożysz w kilka minut – także z telefonu, prosto po sesji zdjęciowej."
+            description="Całe zamówienie złożysz w kilka minut – także z telefonu, prosto po sesji zdjęciowej. Status śledzisz na żywo."
           />
           <Link href={ROUTES.howItWorks} className="link shrink-0 text-sm">
             Szczegóły i wskazówki do zdjęć →
           </Link>
         </div>
-        <Steps steps={STEPS} className="mt-10" />
+        <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_1.15fr] lg:items-center">
+          <ol className="space-y-4">
+            {STEPS.map((step, index) => (
+              <li key={step.title}>
+                <Reveal delay={index * 70} className="card flex gap-4 p-5">
+                  <StepIcon index={index} />
+                  <div>
+                    <h3 className="text-lg font-semibold text-ink">
+                      <span className="sr-only">Krok {index + 1}: </span>
+                      {step.title}
+                    </h3>
+                    <p className="mt-1 text-sm leading-relaxed text-muted">{step.description}</p>
+                  </div>
+                </Reveal>
+              </li>
+            ))}
+          </ol>
+          <Reveal>
+            <figure>
+              <ProcessPreview className="drop-shadow-[0_12px_32px_rgb(28_28_30/0.10)]" />
+              <figcaption className="mt-3 text-center text-sm text-muted">
+                Tak wygląda strona Twojego zamówienia: etapy realizacji, gotowe pliki i pobieranie ZIP.
+              </figcaption>
+            </figure>
+          </Reveal>
+        </div>
       </Section>
 
-      {/* STYLE */}
+      {/* STYLE – TEN SAM POKÓJ W 6 STYLACH */}
       <Section id="style" labelledBy="style-title">
         <SectionHeading
           id="style-title"
           eyebrow="Style aranżacji"
-          title={`${STYLES.length} stylów dopasowanych do nieruchomości i kupującego`}
-          description="Nie wiesz, który wybrać? Dla mieszkań w blokach najczęściej sprawdza się styl skandynawski, dla kamienic – klasyczny lub loft. Chętnie doradzimy."
+          title={`Ten sam pokój w ${STYLES.length} stylach`}
+          description="Kliknij styl i zobacz, jak zmienia się wnętrze. Okno, grzejnik, ściany i podłoga zostają bez zmian – dokładnie tak, jak w prawdziwej usłudze."
         />
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {STYLES.map((style) => (
-            <StyleCard key={style.slug} style={style} />
-          ))}
+        <Reveal className="mt-10">
+          <StyleSwitcher />
+        </Reveal>
+      </Section>
+
+      {/* DLA KOGO */}
+      <Section id="dla-kogo" tone="cream" labelledBy="dla-kogo-title">
+        <SectionHeading
+          id="dla-kogo-title"
+          eyebrow="Dla kogo"
+          title="Dla każdego, kto pokazuje puste wnętrza"
+          description="Od pojedynczego ogłoszenia właściciela po kilkadziesiąt ofert miesięcznie w biurze."
+        />
+        <div className="mt-10">
+          <AudienceCards />
         </div>
       </Section>
 
@@ -257,6 +307,37 @@ export default function HomePage() {
             </figure>
           ))}
         </div>
+      </Section>
+
+      {/* POLICZ OSZCZĘDNOŚĆ */}
+      <Section id="oszczednosc" labelledBy="oszczednosc-title">
+        <SectionHeading
+          id="oszczednosc-title"
+          eyebrow="Policz oszczędność"
+          title="Ile zaoszczędzisz w porównaniu z fizycznym home stagingiem?"
+          description="Ustaw liczbę zdjęć i ofert w miesiącu. Nasze ceny liczymy tym samym kalkulatorem co w formularzu zamówienia."
+        />
+        <Reveal className="mt-10">
+          <SavingsCalculator labelledBy="oszczednosc-title" />
+        </Reveal>
+      </Section>
+
+      {/* DLACZEGO MY */}
+      <Section id="porownanie" tone="surface" labelledBy="porownanie-title">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <SectionHeading
+            id="porownanie-title"
+            eyebrow="Porównanie"
+            title="Dlaczego my, a nie…"
+            description="Uczciwe porównanie z innymi sposobami na umeblowane zdjęcia. Każda opcja ma swoje miejsce – sprawdź, kiedy która się opłaca."
+          />
+          <Link href={ROUTES.comparison} className="link shrink-0 text-sm">
+            Pełne porównanie →
+          </Link>
+        </div>
+        <Reveal className="mt-10">
+          <ComparisonTable compact caption="Porównanie: wirtualny staging, fizyczny home staging, narzędzia AI i agencja graficzna" />
+        </Reveal>
       </Section>
 
       {/* UCZCIWOŚĆ */}
@@ -380,6 +461,42 @@ export default function HomePage() {
             </figure>
           ))}
         </div>
+      </Section>
+
+      {/* BLOG */}
+      <Section id="blog" tone="surface" labelledBy="blog-title">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <SectionHeading
+            id="blog-title"
+            eyebrow="Blog"
+            title="Poradniki dla sprzedających i agentów"
+            description="Jak fotografować puste mieszkanie, który styl wybrać i jak oznaczać wizualizacje zgodnie z prawem."
+          />
+          <Link href={ROUTES.blog} className="link shrink-0 text-sm">
+            Wszystkie artykuły →
+          </Link>
+        </div>
+        <ul className="mt-10 grid gap-4 md:grid-cols-3">
+          {LATEST_POSTS.map((post) => (
+            <li key={post.slug}>
+              <article className="card relative flex h-full flex-col p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sand-dark">
+                  {getCategoryLabel(post.category)}
+                </p>
+                <h3 className="mt-2 text-lg font-semibold leading-snug text-ink">
+                  <Link href={ROUTES.blogPost(post.slug)} className="after:absolute after:inset-0 hover:text-brand">
+                    {post.title}
+                  </Link>
+                </h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{post.description}</p>
+                <p className="mt-4 text-xs text-muted">
+                  <time dateTime={post.publishedAt}>{formatDatePL(post.publishedAt)}</time> · {post.readingMinutes} min
+                  czytania
+                </p>
+              </article>
+            </li>
+          ))}
+        </ul>
       </Section>
 
       {/* FAQ */}

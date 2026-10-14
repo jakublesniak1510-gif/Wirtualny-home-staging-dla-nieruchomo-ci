@@ -1,6 +1,8 @@
 // Generator poglądowych ilustracji portfolio (przed/po) oraz obrazka OpenGraph.
 // Użycie: node scripts/generate-illustrations.mjs  (zapisuje do ./public)
-// Wynik: public/portfolio/{slug}-przed.svg, {slug}-po.svg, public/og.svg, public/og.png
+// Wynik: public/portfolio/{slug}-przed.svg, {slug}-po.svg,
+//        public/portfolio/salon-demo-przed.svg, salon-demo-{slug}.svg (przełącznik „Ten sam pokój w 6 stylach”),
+//        public/og.svg, public/og.png
 // Prawdziwe zdjęcia podmieniasz w src/content/portfolio.ts – ten skrypt nie jest wtedy potrzebny.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -337,7 +339,8 @@ function chandelier({ x = 600, y0 = 60, y = 190 }) {
   return s;
 }
 
-const watermark = `<text x="1170" y="772" text-anchor="end" font-family="${FONT}" font-size="30" font-weight="600" letter-spacing="1.5" fill="#ffffff" fill-opacity=".72" stroke="#000000" stroke-opacity=".28" stroke-width="1.2" paint-order="stroke">wizualizacja</text>`;
+// Znak „wizualizacja” na półprzezroczystej „pigułce” – czytelny na jasnym i ciemnym tle.
+const watermark = `<rect x="956" y="732" width="220" height="48" rx="24" fill="#000000" fill-opacity=".34"/><text x="1066" y="765" text-anchor="middle" font-family="${FONT}" font-size="27" font-weight="600" fill="#ffffff" fill-opacity=".92">wizualizacja</text>`;
 
 const outlet = `<rect x="830" y="505" width="22" height="30" rx="3" fill="#fbfaf7" stroke="#cfc8bc"/><circle cx="841" cy="515" r="2" fill="#999"/><circle cx="841" cy="525" r="2" fill="#999"/>`;
 
@@ -488,6 +491,51 @@ for (const [slug, cfg] of Object.entries(ROOMS)) {
   const after = base + cfg.furniture() + watermark;
   writeFileSync(join(OUT, "portfolio", `${slug}-przed.svg`), svg(before, `Pusty pokój – zdjęcie przed (styl ${TITLES[slug]})`));
   writeFileSync(join(OUT, "portfolio", `${slug}-po.svg`), svg(after, `Pokój po wirtualnym home stagingu – styl ${TITLES[slug]} (wizualizacja)`));
+}
+
+// ---------- Salon demo: ten sam pokój w 6 stylach ----------
+// Jedno pomieszczenie (ściany, okno, grzejnik, podłoga bez zmian), zmieniają się tylko meble i dodatki –
+// tak jak w prawdziwej usłudze. Używane przez src/components/marketing/StyleSwitcher.tsx.
+{
+  const demoRoom = {
+    backFeature: "none",
+    wallBack: "#efebe4",
+    wallSide: "#e4ded4",
+    wallShade: "#d2cabd",
+    ceiling: "#f7f5f1",
+    floor: "#d4bb94",
+    floorLine: "#b99e74",
+    floorType: "planks",
+    baseboard: "#fbfaf7",
+    windowFrame: "#ffffff",
+  };
+  // Grzejnik pod oknem na lewej ścianie (element stały – zostaje na każdej wizualizacji).
+  let radiator = poly(
+    [
+      [82, 560],
+      [222, 507],
+      [222, 588],
+      [82, 694],
+    ],
+    `fill="#f8f7f3" stroke="#cfc8bc" stroke-width="2" stroke-linejoin="round"`,
+  );
+  for (let i = 1; i < 10; i++) {
+    const x = 82 + i * 14;
+    const yTop = 560 - (53 * (x - 82)) / 140;
+    const yBot = 694 - (106 * (x - 82)) / 140;
+    radiator += `<line x1="${x}" y1="${(yTop + 6).toFixed(1)}" x2="${x}" y2="${(yBot - 6).toFixed(1)}" stroke="#d9d3c8" stroke-width="2"/>`;
+  }
+  const base = room(demoRoom) + radiator;
+  writeFileSync(
+    join(OUT, "portfolio", "salon-demo-przed.svg"),
+    svg(base + pendant({ kind: "bulb", y: 200 }) + outlet, "Pusty salon z oknem, grzejnikiem i drewnianą podłogą – zdjęcie przed"),
+  );
+  for (const [slug, cfg] of Object.entries(ROOMS)) {
+    writeFileSync(
+      join(OUT, "portfolio", `salon-demo-${slug}.svg`),
+      svg(base + cfg.furniture() + watermark, `Ten sam salon urządzony w stylu ${TITLES[slug]} (wizualizacja)`),
+    );
+  }
 }
 
 // ---------- OpenGraph 1200×630 ----------

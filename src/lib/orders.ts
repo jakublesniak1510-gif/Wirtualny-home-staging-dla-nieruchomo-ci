@@ -1,8 +1,8 @@
 import { randomBytes, randomInt } from "node:crypto";
 import type { OrderStatus, PaymentStatus } from "@prisma/client";
-import { REVISION_WINDOW_DAYS, isAddonSlug } from "@/lib/pricing";
+import { INCLUDED_REVISIONS, REVISION_WINDOW_DAYS, isAddonSlug } from "@/lib/pricing";
 import type { AddonSlug } from "@/lib/pricing";
-import { SITE } from "@/lib/site";
+import { ROUTES, SITE } from "@/lib/site";
 
 /** Czyste helpery zamówień (bez bazy) – łatwe do testowania. */
 
@@ -158,4 +158,152 @@ export function downloadFileName(
 ): string {
   const ext = key.split(".").pop() ?? "jpg";
   return `${orderNumber}-${String(index + 1).padStart(2, "0")}-${kind}.${ext}`;
+}
+
+// --- warianty wyników i pliki do pobrania ------------------------------------------
+
+/** Litera wariantu: 0 → „A”, 1 → „B”, … 25 → „Z”, 26 → „AA”. */
+export function variantLetter(index: number): string {
+  let n = Math.max(0, Math.trunc(index));
+  let out = "";
+  do {
+    out = String.fromCharCode(65 + (n % 26)) + out;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return out;
+}
+
+export interface VariantSource {
+  id: string;
+  key: string;
+  label?: string | null;
+  sortOrder: number;
+  createdAt: Date;
+}
+
+export interface PhotoVariantsInput {
+  id: string;
+  resultKey: string | null;
+  results: readonly VariantSource[];
+}
+
+export interface PhotoVariant {
+  /** Id wariantu (`<photoId>-main` dla głównego wyniku albo id PhotoResult). */
+  id: string;
+  key: string;
+  letter: string;
+  /** Etykieta do UI, np. „Wariant B – jaśniejsza sofa”. */
+  label: string;
+  isMain: boolean;
+}
+
+/**
+ * Wszystkie warianty wyniku zdjęcia w stałej kolejności: najpierw główny `resultKey` („Wariant A”),
+ * potem dodatkowe PhotoResult wg `sortOrder`, daty dodania i id.
+ */
+export function listPhotoVariants(photo: PhotoVariantsInput): PhotoVariant[] {
+  const extra = [...photo.results].sort(
+    (a, b) =>
+      a.sortOrder - b.sortOrder ||
+      a.createdAt.getTime() - b.createdAt.getTime() ||
+      a.id.localeCompare(b.id),
+  );
+  const all: Array<{ id: string; key: string; label?: string | null; isMain: boolean }> = [];
+  if (photo.resultKey) all.push({ id: `${photo.id}-main`, key: photo.resultKey, isMain: true });
+  for (const result of extra) {
+    if (result.key !== photo.resultKey) all.push({ id: result.id, key: result.key, label: result.label, isMain: false });
+  }
+  return all.map((variant, index) => {
+    const letter = variantLetter(index);
+    const custom = variant.label?.trim();
+    return {
+      id: variant.id,
+      key: variant.key,
+      letter,
+      label: custom ? `Wariant ${letter} – ${custom}` : `Wariant ${letter}`,
+      isMain: variant.isMain,
+    };
+  });
+}
+
+/** Rozszerzenie pliku z klucza magazynu (bezpieczne, małe litery; domyślnie „jpg”). */
+function safeExtension(key: string): string {
+  const ext = key.includes(".") ? (key.split(".").pop() ?? "").toLowerCase() : "";
+  return /^[a-z0-9]{1,5}$/.test(ext) ? ext : "jpg";
+}
+
+/** Nazwa pliku wariantu, np. „WS-ABCD1234-01-wariant-A-wizualizacja.jpg”. */
+export function variantFileName(orderNumber: string, photoIndex: number, letter: string, key: string): string {
+  return `${orderNumber}-${String(photoIndex + 1).padStart(2, "0")}-wariant-${letter}-wizualizacja.${safeExtension(key)}`;
+}
+
+export interface ZipFileEntry {
+  key: string;
+  name: string;
+}
+
+/** Lista plików do archiwum ZIP: wszystkie warianty wszystkich zdjęć (w kolejności zdjęć). */
+export function buildVariantZipEntries(
+  orderNumber: string,
+  photos: readonly PhotoVariantsInput[],
+): ZipFileEntry[] {
+  return photos.flatMap((photo, index) =>
+    listPhotoVariants(photo).map((variant) => ({
+      key: variant.key,
+      name: variantFileName(orderNumber, index, variant.letter, variant.key),
+    })),
+  );
+}
+
+export interface ReadmeInput {
+  orderNumber: string;
+  styleName: string;
+  photoCount: number;
+  fileNames: readonly string[];
+  termsUrl: string;
+  statusUrl: string;
+  deliveredAt?: Date | null;
+}
+
+/** Treść pliku CZYTAJ.txt dołączanego do ZIP (CRLF + BOM – poprawnie otwiera się w Notatniku). */
+export function buildReadmeText(input: ReadmeInput): string {
+  const lines = [
+    `${SITE.name} – zamówienie ${input.orderNumber}`,
+    "=".repeat(48),
+    "",
+    `Styl aranżacji: ${input.styleName}`,
+    `Liczba zdjęć: ${input.photoCount}`,
+    input.deliveredAt
+      ? `Dostarczono: ${new Intl.DateTimeFormat("pl-PL", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Warsaw" }).format(input.deliveredAt)}`
+      : null,
+    `Plików w archiwum: ${input.fileNames.length}`,
+    "",
+    "PLIKI",
+    "Nazwa pliku: <numer zamówienia>-<nr zdjęcia>-wariant-<litera>-wizualizacja.<rozszerzenie>",
+    "Wariant A to wersja główna; kolejne litery to dodatkowe propozycje dla tego samego zdjęcia.",
+    ...input.fileNames.map((name) => `  - ${name}`),
+    "",
+    "OZNACZENIE WIZUALIZACJI",
+    "Każdy plik ma znak „wizualizacja”. Nie usuwaj go ani nie zasłaniaj.",
+    "",
+    "ZASADY PUBLIKACJI",
+    "1. Publikuj wizualizację razem ze zdjęciem oryginalnym albo wyraźnie oznacz ją w opisie",
+    "   (np. „zdjęcie poglądowe – wirtualna aranżacja”).",
+    "2. Wizualizacja nie może ukrywać wad lokalu ani zmieniać jego metrażu, układu czy widoku z okien.",
+    "3. Meble i dekoracje na wizualizacji nie wchodzą w skład oferty – zaznacz to, jeśli może budzić wątpliwości.",
+    "",
+    `Poprawki: w cenie masz ${INCLUDED_REVISIONS} bezpłatną rundę poprawek w ciągu ${REVISION_WINDOW_DAYS} dni od dostarczenia.`,
+    `Zgłoś ją na stronie zamówienia: ${input.statusUrl}`,
+    "",
+    `Regulamin: ${input.termsUrl}`,
+    `Kontakt: ${SITE.email}`,
+    "",
+  ];
+  return `\uFEFF${lines.filter((line): line is string => line !== null).join("\r\n")}`;
+}
+
+
+/** Ścieżka linku polecającego: kreator z wypełnionym kodem polecenia (e-mail polecającego). */
+export function referralPath(email: string): string {
+  return `${ROUTES.order}?polecenie=${encodeURIComponent(email.trim().toLowerCase())}`;
 }

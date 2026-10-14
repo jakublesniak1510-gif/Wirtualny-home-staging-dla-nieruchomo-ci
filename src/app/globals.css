@@ -164,3 +164,81 @@
     }
   }
 }
+
+/* ---------- Faza 3: animacje i klasy marketingowe (Agent A) ---------- */
+@layer components {
+  /* Wejście sekcji przy przewinięciu – src/components/marketing/Reveal.tsx */
+  .reveal {
+    transition:
+      opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .reveal[data-reveal="hidden"] {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+
+  /* Łagodne przenikanie obrazów (przełącznik stylów). */
+  .crossfade {
+    transition: opacity 450ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .crossfade {
+      transition: none;
+    }
+
+    .reveal[data-reveal="hidden"] {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Treść artykułu bloga (bloki h2/h3/p/ul/ol generowane z src/content/blog). */
+  .prose-blog {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: var(--color-ink);
+
+    & > * + * {
+      margin-top: 1.25rem;
+    }
+
+    & h2 {
+      margin-top: 2.75rem;
+      font-size: 1.625rem;
+      line-height: 1.25;
+      font-weight: 600;
+    }
+
+    & h3 {
+      margin-top: 2rem;
+      font-size: 1.25rem;
+      line-height: 1.3;
+      font-weight: 600;
+    }
+
+    & ul,
+    & ol {
+      padding-left: 1.4rem;
+    }
+
+    & ul {
+      list-style: disc;
+    }
+
+    & ol {
+      list-style: decimal;
+    }
+
+    & li + li {
+      margin-top: 0.5rem;
+    }
+
+    & li::marker {
+      color: var(--color-brand);
+    }
+  }
+}

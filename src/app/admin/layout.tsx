@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { logoutAction } from "@/app/admin/actions";
+import { SessionKeepAlive } from "@/components/admin/SessionKeepAlive";
 import { isAdminSession } from "@/lib/admin-auth";
 import { SITE } from "@/lib/site";
 
@@ -14,8 +15,11 @@ export const metadata: Metadata = {
 
 const NAV = [
   { href: "/admin", label: "Zamówienia" },
+  { href: "/admin/poprawki", label: "Poprawki" },
+  { href: "/admin/polecenia", label: "Polecenia" },
   { href: "/admin/kody", label: "Kody pakietów" },
   { href: "/admin/zgloszenia", label: "Zgłoszenia" },
+  { href: "/admin/ustawienia", label: "Ustawienia" },
 ] as const;
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -41,6 +45,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           )}
         </div>
       </div>
+      {loggedIn && <SessionKeepAlive />}
       {children}
     </div>
   );

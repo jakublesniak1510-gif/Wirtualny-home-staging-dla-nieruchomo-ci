@@ -47,6 +47,10 @@ export const ROUTES = {
   contact: "/kontakt",
   terms: "/regulamin",
   privacy: "/polityka-prywatnosci",
+  blog: "/blog",
+  blogPost: (slug: string) => `/blog/${slug}`,
+  comparison: "/porownanie",
+  myOrders: "/moje-zamowienia",
   admin: "/admin",
 } as const;
 
@@ -61,7 +65,7 @@ export const MAIN_NAV: readonly NavItem[] = [
   { label: "Portfolio", href: ROUTES.portfolio },
   { label: "Cennik", href: ROUTES.pricing },
   { label: "Dla biur", href: ROUTES.offices },
-  { label: "FAQ", href: ROUTES.faq },
+  { label: "Blog", href: ROUTES.blog },
   { label: "Kontakt", href: ROUTES.contact },
 ];
 

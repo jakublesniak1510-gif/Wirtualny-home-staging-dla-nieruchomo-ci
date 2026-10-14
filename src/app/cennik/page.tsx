@@ -3,7 +3,11 @@ import { Badge } from "@/components/Badge";
 import { CheckIcon } from "@/components/CheckIcon";
 import { CtaBanner } from "@/components/CtaBanner";
 import { FaqAccordion } from "@/components/FaqAccordion";
+import { PriceCalculator } from "@/components/marketing/PriceCalculator";
+import { Reveal } from "@/components/marketing/Reveal";
+import { SavingsCalculator } from "@/components/marketing/SavingsCalculator";
 import { PageHeader } from "@/components/PageHeader";
+import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
 import { PriceTable } from "@/components/PriceTable";
 import { Section } from "@/components/Section";
 import { SectionHeading } from "@/components/SectionHeading";
@@ -162,6 +166,7 @@ export default function PricingPage() {
   return (
     <>
       <PageHeader
+        breadcrumbs={<Breadcrumbs items={[{ name: "Cennik", path: ROUTES.pricing }]} />}
         eyebrow="Cennik"
         title="Płacisz za zdjęcie – bez abonamentu i ukrytych opłat"
         description={
@@ -175,15 +180,27 @@ export default function PricingPage() {
         }
         actions={
           <>
-            <Link href={ROUTES.order} className="btn-primary px-6 text-base">
-              Policz cenę i zamów
-            </Link>
+            <a href="#kalkulator" className="btn-primary px-6 text-base">
+              Policz cenę
+            </a>
             <Link href={ROUTES.freeSample} className="btn-secondary px-6 text-base">
               {formatPhotoCount(FREE_SAMPLE_PHOTOS)} gratis na próbę
             </Link>
           </>
         }
       />
+
+      <Section id="kalkulator" tone="cream" labelledBy="kalkulator-title">
+        <SectionHeading
+          id="kalkulator-title"
+          eyebrow="Kalkulator ceny"
+          title="Policz cenę swojego zamówienia"
+          description="Ustaw liczbę zdjęć, dodatki i termin – cena brutto i netto przelicza się na żywo. Jednym kliknięciem przeniesiesz ustawienia do formularza zamówienia."
+        />
+        <div className="mt-10">
+          <PriceCalculator />
+        </div>
+      </Section>
 
       <Section labelledBy="ceny-title">
         <SectionHeading
@@ -245,6 +262,18 @@ export default function PricingPage() {
           Zdjęcie nie nadaje się do obróbki (jest za ciemne albo rozmyte)? Napiszemy przed rozpoczęciem pracy – możesz
           przesłać inne ujęcie albo odzyskać pieniądze za to zdjęcie.
         </p>
+      </Section>
+
+      <Section id="oszczednosc" tone="cream" labelledBy="oszczednosc-title">
+        <SectionHeading
+          id="oszczednosc-title"
+          eyebrow="Policz oszczędność"
+          title="Wirtualny czy fizyczny home staging – ile zostaje w kieszeni?"
+          description="Porównaj miesięczny koszt naszych wizualizacji z orientacyjną ceną fizycznego home stagingu. Sprawdź też, kiedy opłaca się abonament."
+        />
+        <Reveal className="mt-10">
+          <SavingsCalculator labelledBy="oszczednosc-title" />
+        </Reveal>
       </Section>
 
       <Section tone="surface" labelledBy="pakiety-title">

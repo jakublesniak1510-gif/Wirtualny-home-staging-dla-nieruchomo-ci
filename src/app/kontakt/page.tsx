@@ -5,6 +5,7 @@ import { PROVIDER } from "@/content/legal";
 import { SUPPORT_HOURS } from "@/content/service";
 import { pageMetadata } from "@/lib/seo";
 import { ROUTES, SITE } from "@/lib/site";
+import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
 
 export const metadata = pageMetadata({
   title: "Kontakt",
@@ -25,6 +26,7 @@ export default function ContactPage() {
   return (
     <>
       <PageHeader
+        breadcrumbs={<Breadcrumbs items={[{ name: "Kontakt", path: ROUTES.contact }]} />}
         eyebrow="Kontakt"
         title="Porozmawiajmy o Twoich zdjęciach"
         description={

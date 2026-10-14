@@ -2,6 +2,7 @@ import type { OrderStatus, Prisma } from "@prisma/client";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
+import { STATS_DAYS, formatHoursMinutes, getDashboardStats } from "@/lib/admin-stats";
 import { prisma } from "@/lib/db";
 import { formatDateTimePL, formatPLN } from "@/lib/format";
 import {
@@ -17,6 +18,24 @@ import { getStyleName } from "@/lib/styles";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Zamówienia" };
+
+function Tile({ label, value, hint, tone = "default", href }: { label: string; value: string; hint?: string; tone?: "default" | "danger" | "brand"; href?: string }) {
+  const toneClass = tone === "danger" ? "border-danger/30 bg-danger/5" : tone === "brand" ? "border-brand/20 bg-brand-light" : "";
+  const body = (
+    <>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold tabular-nums ${tone === "danger" ? "text-danger" : "text-ink"}`}>{value}</p>
+      {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
+    </>
+  );
+  return href ? (
+    <Link href={href} className={`card block p-4 transition-shadow hover:shadow-lift ${toneClass}`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={`card p-4 ${toneClass}`}>{body}</div>
+  );
+}
 
 const STATUS_FILTERS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "aktywne", label: "Do realizacji (opłacone, w realizacji)" },
@@ -61,12 +80,29 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
     where,
     orderBy: { createdAt: "desc" },
     take: 200,
-    include: { _count: { select: { photos: true } }, photos: { select: { resultKey: true } } },
+    include: {
+      _count: { select: { photos: true, revisions: { where: { status: { in: ["OPEN", "IN_PROGRESS"] } } } } },
+      photos: { select: { resultKey: true, _count: { select: { aiVariants: true } } } },
+    },
   });
   const now = new Date();
+  const stats = await getDashboardStats(now);
 
   return (
     <div className="container-x py-8">
+      <section aria-label="Podsumowanie" className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6" data-testid="kafelki">
+        <Tile label="Do zrobienia" value={String(stats.toDo)} hint="opłacone + w realizacji" tone={stats.toDo > 0 ? "brand" : "default"} href="/admin?status=aktywne" />
+        <Tile label="Po terminie" value={String(stats.overdue)} hint="opłacone, niedostarczone" tone={stats.overdue > 0 ? "danger" : "default"} />
+        <Tile label="Otwarte poprawki" value={String(stats.openRevisions)} hint="nowe + w realizacji" tone={stats.openRevisions > 0 ? "danger" : "default"} href="/admin/poprawki" />
+        <Tile label={`Przychód ${STATS_DAYS} dni`} value={formatPLN(stats.revenue30d)} hint={`${stats.paidOrders30d} opłaconych zamówień`} />
+        <Tile
+          label="Średni czas realizacji"
+          value={stats.avgTurnaroundMs === null ? "—" : formatHoursMinutes(stats.avgTurnaroundMs)}
+          hint={`opłacenie → dostarczenie, ${stats.delivered30d} zam. / ${STATS_DAYS} dni`}
+        />
+        <Tile label={`Koszt AI ${STATS_DAYS} dni`} value={formatPLN(stats.aiCost30d)} hint={`${stats.aiVariants30d} wariantów (szacunek)`} />
+      </section>
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-ink">Zamówienia</h1>
@@ -96,7 +132,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
       </div>
 
       <div className="card mt-6 overflow-x-auto">
-        <table className="w-full min-w-[60rem] text-left text-sm">
+        <table className="w-full min-w-[68rem] text-left text-sm">
           <thead className="border-b border-line bg-paper text-xs uppercase tracking-wide text-muted">
             <tr>
               <th scope="col" className="px-4 py-3">Numer</th>
@@ -108,12 +144,14 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
               <th scope="col" className="px-4 py-3">Płatność</th>
               <th scope="col" className="px-4 py-3">Status</th>
               <th scope="col" className="px-4 py-3">Termin</th>
+              <th scope="col" className="px-4 py-3">Poprawki</th>
+              <th scope="col" className="px-4 py-3">AI</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
             {orders.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-muted">
+                <td colSpan={11} className="px-4 py-10 text-center text-muted">
                   Brak zamówień dla wybranych filtrów.
                 </td>
               </tr>
@@ -121,6 +159,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
             {orders.map((order) => {
               const overdue = isOverdue(order, now);
               const results = order.photos.filter((p) => p.resultKey).length;
+              const aiCount = order.photos.reduce((sum, p) => sum + p._count.aiVariants, 0);
               return (
                 <tr key={order.id} className={overdue ? "bg-danger/5" : "hover:bg-paper"}>
                   <td className="whitespace-nowrap px-4 py-3 font-medium">
@@ -154,6 +193,14 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                     {order.paymentStatus === "UNPAID" ? "—" : formatDateTimePL(getDeadline(order))}
                     {overdue && <span className="block text-xs">po terminie</span>}
                   </td>
+                  <td className="px-4 py-3 tabular-nums">
+                    {order._count.revisions > 0 ? (
+                      <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-semibold text-danger">{order._count.revisions} otwarte</span>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-muted">{aiCount > 0 ? `${aiCount} war.` : "—"}</td>
                 </tr>
               );
             })}

@@ -20,6 +20,16 @@ import type { StyleSlug } from "@/lib/styles";
 
 interface OrderWizardProps {
   initialStyle: StyleSlug;
+  /** Dodatki wstępnie zaznaczone (np. z kalkulatora na /cennik: ?dodatki=a,b) */
+  initialAddons?: readonly AddonSlug[];
+  /** Ekspres wstępnie włączony (?ekspres=1) */
+  initialExpress?: boolean;
+  /** Kod polecenia z linku polecającego (?polecenie=email) */
+  initialReferralCode?: string;
+  /** Planowana liczba zdjęć z kalkulatora na /cennik (?zdjecia=N) – tylko do podglądu ceny przed uploadem */
+  plannedPhotoCount?: number;
+  /** Kod pakietu wstępnie wpisany (?kod=WS-XXXX-XXXX z „Moje zamówienia”) – do sprawdzenia przyciskiem */
+  initialPackageCode?: string;
   maxMb: number;
   minShortSide: number;
   paymentsEnabled: boolean;
@@ -53,21 +63,31 @@ function StepHeading({ n, title, description }: { n: number; title: string; desc
   );
 }
 
-export function OrderWizard({ initialStyle, maxMb, minShortSide, paymentsEnabled }: OrderWizardProps) {
+export function OrderWizard({
+  initialStyle,
+  initialAddons = [],
+  initialExpress = false,
+  initialReferralCode = "",
+  initialPackageCode = "",
+  plannedPhotoCount,
+  maxMb,
+  minShortSide,
+  paymentsEnabled,
+}: OrderWizardProps) {
   const router = useRouter();
   const uploads = usePhotoUploads({ maxFiles: MAX_PHOTOS, maxMb });
   const [style, setStyle] = useState<StyleSlug>(initialStyle);
-  const [addons, setAddons] = useState<AddonSlug[]>([]);
-  const [express, setExpress] = useState(false);
+  const [addons, setAddons] = useState<AddonSlug[]>([...initialAddons]);
+  const [express, setExpress] = useState(initialExpress);
   const [notes, setNotes] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [nip, setNip] = useState("");
-  const [codeInput, setCodeInput] = useState("");
+  const [codeInput, setCodeInput] = useState(initialPackageCode);
   const [code, setCode] = useState<CodeState>({ state: "idle" });
-  const [referralCode, setReferralCode] = useState("");
+  const [referralCode, setReferralCode] = useState(initialReferralCode);
   const [consents, setConsents] = useState<ConsentState>(EMPTY_CONSENTS);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -75,15 +95,16 @@ export function OrderWizard({ initialStyle, maxMb, minShortSide, paymentsEnabled
 
   const photoCount = uploads.items.length;
   const credits = code.state === "valid" ? code.credits : 0;
+  const previewCount = photoCount > 0 ? photoCount : (plannedPhotoCount ?? 1);
   const breakdown = useMemo(
     () =>
       calculateOrderPrice({
-        photoCount: Math.min(Math.max(photoCount, 1), MAX_PHOTOS),
+        photoCount: Math.min(Math.max(previewCount, 1), MAX_PHOTOS),
         addons,
         express,
         packageCredits: credits,
       }),
-    [photoCount, addons, express, credits],
+    [previewCount, addons, express, credits],
   );
   const turnaround = express ? SITE.expressHours : SITE.turnaroundHours;
   const isFree = photoCount > 0 && breakdown.total === 0;
@@ -423,12 +444,18 @@ export function OrderWizard({ initialStyle, maxMb, minShortSide, paymentsEnabled
             Podsumowanie
           </h2>
           <p className="mt-1 text-sm text-muted">
-            {photoCount > 0 ? formatPhotoCount(photoCount) : "Brak zdjęć"} · {getStyle(style).name}
+            {photoCount > 0
+              ? formatPhotoCount(photoCount)
+              : plannedPhotoCount
+                ? `Planujesz ${formatPhotoCount(plannedPhotoCount)}`
+                : "Brak zdjęć"}{" "}
+            · {getStyle(style).name}
           </p>
           <div className="mt-4">
             <PriceSummary
               breakdown={breakdown}
               photoCount={photoCount}
+              plannedPhotoCount={plannedPhotoCount}
               styleName={getStyle(style).name}
               turnaroundHours={turnaround}
             />

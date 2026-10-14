@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CtaBanner } from "@/components/CtaBanner";
 import { PageHeader } from "@/components/PageHeader";
+import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
 import { PortfolioGallery } from "@/components/PortfolioGallery";
 import { formatPhotoCount } from "@/lib/format";
 import { FREE_SAMPLE_PHOTOS } from "@/lib/pricing";
@@ -18,6 +19,7 @@ export default function PortfolioPage() {
   return (
     <>
       <PageHeader
+        breadcrumbs={<Breadcrumbs items={[{ name: "Portfolio", path: ROUTES.portfolio }]} />}
         eyebrow="Portfolio"
         title="Przed i po – przesuń suwak i porównaj"
         description={

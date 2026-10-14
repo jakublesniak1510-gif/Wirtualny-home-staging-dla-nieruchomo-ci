@@ -9,15 +9,18 @@ interface PageHeaderProps {
   actions?: ReactNode;
   /** Dodatkowa treść po prawej stronie (np. karta z ceną) – od lg. */
   aside?: ReactNode;
+  /** Okruszki nad nagłówkiem (np. <Breadcrumbs />). */
+  breadcrumbs?: ReactNode;
   className?: string;
 }
 
 /** Nagłówek podstrony (H1) w stylu hero ze strony głównej, ale niższy. */
-export function PageHeader({ title, eyebrow, description, actions, aside, className = "" }: PageHeaderProps) {
+export function PageHeader({ title, eyebrow, description, actions, aside, breadcrumbs, className = "" }: PageHeaderProps) {
   return (
     <section className={`border-b border-line bg-cream/60 pb-12 pt-10 sm:pb-16 sm:pt-14 ${className}`}>
       <div className={`container-x ${aside ? "grid items-center gap-10 lg:grid-cols-[1.3fr_1fr]" : ""}`}>
         <div className="max-w-3xl">
+          {breadcrumbs && <div className="mb-5">{breadcrumbs}</div>}
           {eyebrow && (
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-sand-dark">{eyebrow}</p>
           )}

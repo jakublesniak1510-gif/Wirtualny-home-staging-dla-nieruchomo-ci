@@ -12,7 +12,14 @@ export interface PortfolioItem {
   afterSrc: string;
   beforeAlt: string;
   afterAlt: string;
+  /** „Co zmieniliśmy” – 3 punkty. */
+  changes: readonly [string, string, string];
+  /** „Czego NIE zmieniliśmy” – elementy stałe lokalu (domyślnie UNCHANGED_DEFAULT + specyficzne). */
+  unchanged: readonly string[];
 }
+
+/** Elementy, których nie zmieniamy na żadnej wizualizacji. */
+export const UNCHANGED_DEFAULT = ["okna i widok za oknem", "ściany i układ pomieszczenia", "metraż i wysokość"] as const;
 
 /**
  * Pary „przed/po” w /public/portfolio/{slug}-przed.svg i {slug}-po.svg.
@@ -38,6 +45,12 @@ export const PORTFOLIO: readonly PortfolioItem[] = [
     beforeAlt: "Pusty, jasny salon z oknem i dębową podłogą – zdjęcie przed",
     afterAlt:
       "Ten sam salon w stylu skandynawskim z jasną sofą, okrągłym stolikiem, dywanem i rośliną – wizualizacja",
+    changes: [
+      "jasna sofa z poduszkami w kolorach stylu",
+      "okrągły dębowy stolik i wełniany dywan",
+      "lampa podłogowa, plakat i roślina w doniczce",
+    ],
+    unchanged: [...UNCHANGED_DEFAULT, "dębowa podłoga"],
   },
   {
     slug: "nowoczesny",
@@ -50,6 +63,12 @@ export const PORTFOLIO: readonly PortfolioItem[] = [
     beforeAlt: "Pusty salon z szarą podłogą w stanie deweloperskim – zdjęcie przed",
     afterAlt:
       "Ten sam salon w stylu nowoczesnym z grafitową sofą, czarnym stolikiem i lampą łukową – wizualizacja",
+    changes: [
+      "grafitowa sofa z koniakowymi akcentami",
+      "czarny stolik kawowy i grafika na ścianie",
+      "lampa łukowa i sansewieria",
+    ],
+    unchanged: [...UNCHANGED_DEFAULT, "szara posadzka"],
   },
   {
     slug: "loft",
@@ -62,6 +81,12 @@ export const PORTFOLIO: readonly PortfolioItem[] = [
     beforeAlt: "Pusty pokój z ceglaną ścianą i ciemną podłogą – zdjęcie przed",
     afterAlt:
       "Ten sam pokój w stylu loft ze skórzaną sofą, metalowym stolikiem i lampą na trójnogu – wizualizacja",
+    changes: [
+      "skórzana sofa w kolorze koniaku",
+      "stolik z drewna i czarnego metalu, industrialna lampa",
+      "dywan, roślina i grafika w czarnej ramie",
+    ],
+    unchanged: [...UNCHANGED_DEFAULT, "ceglana ściana", "ciemna podłoga z desek"],
   },
   {
     slug: "klasyczny",
@@ -74,6 +99,12 @@ export const PORTFOLIO: readonly PortfolioItem[] = [
     beforeAlt: "Pusty salon ze sztukaterią na ścianach i parkietem – zdjęcie przed",
     afterAlt:
       "Ten sam salon w stylu klasycznym z granatową sofą, marmurowym stolikiem i żyrandolem – wizualizacja",
+    changes: [
+      "granatowa welurowa sofa i marmurowy stolik",
+      "żyrandol ze świecami i obrazy w złotych ramach",
+      "dywan z bordiurą, stolik boczny z lampą",
+    ],
+    unchanged: [...UNCHANGED_DEFAULT, "sztukateria na ścianie", "parkiet"],
   },
   {
     slug: "boho",
@@ -86,6 +117,12 @@ export const PORTFOLIO: readonly PortfolioItem[] = [
     beforeAlt: "Pusty pokój w ciepłych barwach z drewnianą podłogą – zdjęcie przed",
     afterAlt:
       "Ten sam pokój w stylu boho z rattanową lampą, okrągłym dywanem z juty i roślinami – wizualizacja",
+    changes: [
+      "jasna sofa z kolorowymi poduszkami",
+      "okrągły dywan z juty, pufa z terakoty",
+      "rattanowa lampa, makrama i dwie rośliny",
+    ],
+    unchanged: [...UNCHANGED_DEFAULT, "drewniana podłoga"],
   },
   {
     slug: "japandi",
@@ -98,6 +135,12 @@ export const PORTFOLIO: readonly PortfolioItem[] = [
     beforeAlt: "Pusty salon z jasnymi ścianami i drewnianą podłogą – zdjęcie przed",
     afterAlt:
       "Ten sam salon w stylu japandi z niską sofą, drewnianym stolikiem i papierową lampą – wizualizacja",
+    changes: [
+      "niska sofa w kolorze piasku",
+      "niski stolik z ciemnego drewna",
+      "papierowa lampa, okrągła lampa podłogowa i roślina",
+    ],
+    unchanged: [...UNCHANGED_DEFAULT, "drewniana podłoga"],
   },
 ];
 

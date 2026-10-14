@@ -134,7 +134,7 @@ export const orderInputSchema = z.object({
   company: optionalText(160, "Firma"),
   nip: optionalNipSchema,
   packageCode: optionalPackageCodeSchema,
-  referralCode: optionalText(40, "Kod polecenia"),
+  referralCode: optionalText(254, "Kod polecenia"),
   consents: consentsSchema,
 });
 
