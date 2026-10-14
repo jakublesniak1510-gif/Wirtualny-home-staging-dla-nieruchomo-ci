@@ -17,8 +17,18 @@ export interface WatermarkResult {
   ext: "jpg" | "png" | "webp";
 }
 
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 /** SVG z napisem w rozmiarze całego obrazu (tekst wyrównany do prawego dolnego rogu). */
-export function buildWatermarkSvg(width: number, height: number, text = WATERMARK_TEXT): string {
+export function buildWatermarkSvg(width: number, height: number, rawText = WATERMARK_TEXT): string {
+  const text = escapeXml(rawText);
   const fontSize = Math.max(14, Math.round(width * WATERMARK_SIZE_RATIO));
   const margin = Math.max(10, Math.round(width * 0.02));
   const shadow = Math.max(1, Math.round(fontSize / 14));

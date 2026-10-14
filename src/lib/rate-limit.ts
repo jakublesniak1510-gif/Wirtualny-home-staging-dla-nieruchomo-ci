@@ -67,6 +67,8 @@ export const LIMITS = {
   orders: { limit: 20, windowMs: 10 * 60_000 },
   codeValidate: { limit: 30, windowMs: 10 * 60_000 },
   login: { limit: 10, windowMs: 10 * 60_000 },
+  /** Wszystkie próby logowania do panelu łącznie (niezależnie od IP). */
+  loginGlobal: { limit: 50, windowMs: 10 * 60_000 },
   sample: { limit: 5, windowMs: 60 * 60_000 },
 } as const satisfies Record<string, RateLimitOptions>;
 

@@ -1,6 +1,6 @@
 import { adminGuard } from "@/lib/admin-auth";
 import { handleRouteError, jsonError, readJson, validationError } from "@/lib/api";
-import { notifyOrderInProgressSafe } from "@/lib/admin-notify";
+import { markOrderInProgressIfPaid } from "@/lib/admin-results";
 import { prisma } from "@/lib/db";
 import { cancelOrder } from "@/lib/order-service";
 import { adminStatusSchema } from "@/lib/validation";
@@ -31,6 +31,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/admin/order
     if (order.paymentStatus === "UNPAID") {
       return jsonError(409, "Zamówienie nie jest opłacone – nie można zmienić statusu realizacji.");
     }
+    if (status === "IN_PROGRESS" && order.status === "PAID") {
+      // Atomowe PAID → IN_PROGRESS: e-mail „pracujemy” wychodzi raz, także przy podwójnym kliknięciu
+      // albo równoległym wgraniu pierwszego wyniku (które robi to samo przejście).
+      await markOrderInProgressIfPaid(id);
+      return Response.json({ status });
+    }
     await prisma.order.update({
       where: { id },
       data: {
@@ -38,7 +44,6 @@ export async function POST(request: Request, ctx: RouteContext<"/api/admin/order
         deliveredAt: status === "DELIVERED" ? (order.deliveredAt ?? new Date()) : order.deliveredAt,
       },
     });
-    if (status === "IN_PROGRESS" && order.status === "PAID") await notifyOrderInProgressSafe(id);
     return Response.json({ status });
   } catch (error) {
     return handleRouteError(error, "Zmiana statusu");

@@ -22,6 +22,7 @@ import { absoluteUrl } from "@/lib/site";
 import {
   PaymentsNotConfiguredError,
   createCheckoutSession,
+  expireCheckoutSession,
   isStripeConfigured,
 } from "@/lib/stripe";
 import { StorageNotFoundError, getStorage } from "@/lib/storage";
@@ -234,6 +235,11 @@ export async function retryCheckout(publicToken: string): Promise<string> {
     breakdown,
   });
   await prisma.order.update({ where: { id: order.id }, data: { stripeSessionId: session.id } });
+  // Poprzednia sesja wciąż przyjmowałaby płatność (np. w drugiej karcie) – klient zapłaciłby dwa razy.
+  // Wygaszamy ją DOPIERO po zapisaniu nowej: webhook `expired` starej sesji nie anuluje wtedy zamówienia.
+  if (order.stripeSessionId && order.stripeSessionId !== session.id) {
+    await expireCheckoutSession(order.stripeSessionId);
+  }
   return session.url;
 }
 
@@ -304,20 +310,57 @@ export async function markOrderPaid(
   if (order.status === "CANCELLED") {
     console.warn(`[orders] Płatność dla anulowanego zamówienia ${getOrderNumber(order.id)} – przywracam.`);
   }
-  const result = await prisma.order.updateMany({
-    where: { id: orderId, paymentStatus: "UNPAID" },
-    data: {
-      paymentStatus: "PAID",
-      status: "PAID",
-      paidAt: new Date(),
-      cancelledAt: null,
-      stripePaymentIntentId: details.paymentIntentId ?? undefined,
-      stripeSessionId: details.sessionId ?? undefined,
-    },
+  const changed = await prisma.$transaction(async (tx) => {
+    const result = await tx.order.updateMany({
+      where: { id: orderId, paymentStatus: "UNPAID" },
+      data: {
+        paymentStatus: "PAID",
+        status: "PAID",
+        paidAt: new Date(),
+        cancelledAt: null,
+        stripePaymentIntentId: details.paymentIntentId ?? undefined,
+        stripeSessionId: details.sessionId ?? undefined,
+      },
+    });
+    if (result.count !== 1) return false;
+    await reclaimReleasedCredits(tx, orderId);
+    return true;
   });
-  if (result.count !== 1) return false;
+  if (!changed) return false;
   await notifyOrderPlaced(orderId);
   return true;
+}
+
+/**
+ * Anulowanie (cancelOrder) zwraca kredyty kodu pakietu i zeruje `packageCreditsUsed`. Jeśli takie
+ * zamówienie zostanie mimo to opłacone (np. admin anulował je, gdy klient był na stronie Stripe),
+ * kwota w Stripe uwzględniała rabat z kredytów – rezerwujemy je ponownie, inaczej ten sam kod
+ * dałoby się wykorzystać drugi raz.
+ */
+async function reclaimReleasedCredits(tx: Prisma.TransactionClient, orderId: string): Promise<void> {
+  const order = await tx.order.findUnique({
+    where: { id: orderId },
+    select: { packageCodeId: true, packageCreditsUsed: true, priceBreakdown: true },
+  });
+  if (!order?.packageCodeId || order.packageCreditsUsed > 0) return;
+  let creditsUsed = 0;
+  try {
+    creditsUsed = Number((JSON.parse(order.priceBreakdown) as Partial<PriceBreakdown>).creditsUsed ?? 0);
+  } catch {
+    creditsUsed = 0;
+  }
+  if (!Number.isInteger(creditsUsed) || creditsUsed <= 0) return;
+  const reserved = await tx.packageCode.updateMany({
+    where: { id: order.packageCodeId, creditsLeft: { gte: creditsUsed } },
+    data: { creditsLeft: { decrement: creditsUsed } },
+  });
+  if (reserved.count !== 1) {
+    console.warn(
+      `[orders] Zamówienie ${getOrderNumber(orderId)} opłacone po anulowaniu, ale kod pakietu nie ma już ${creditsUsed} kredytów – sprawdź ręcznie.`,
+    );
+    return;
+  }
+  await tx.order.update({ where: { id: orderId }, data: { packageCreditsUsed: creditsUsed } });
 }
 
 /**

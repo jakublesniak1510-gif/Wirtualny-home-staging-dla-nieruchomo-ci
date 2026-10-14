@@ -8,6 +8,7 @@ import {
   inspectImage,
   isAllowedMime,
 } from "@/lib/images";
+import { BodyTooLargeError, readFormDataLimited } from "@/lib/http-body";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getStorage } from "@/lib/storage";
 
@@ -23,15 +24,14 @@ export async function POST(request: Request) {
   if (limited) return limited;
 
   const maxBytes = getMaxUploadBytes();
-  const declared = Number(request.headers.get("content-length") ?? 0);
-  if (declared > maxBytes + 64 * 1024) {
-    return jsonError(413, `Plik jest za duży. Maksymalny rozmiar to ${getMaxUploadMb()} MB.`);
-  }
-
   let form: FormData;
   try {
-    form = await request.formData();
-  } catch {
+    // Limit liczony na faktycznie przeczytanych bajtach – brak Content-Length (chunked) go nie omija.
+    form = await readFormDataLimited(request, maxBytes + 64 * 1024);
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) {
+      return jsonError(413, `Plik jest za duży. Maksymalny rozmiar to ${getMaxUploadMb()} MB.`);
+    }
     return jsonError(400, "Nie udało się odczytać przesłanego pliku. Spróbuj ponownie.");
   }
   const files = form.getAll("file");

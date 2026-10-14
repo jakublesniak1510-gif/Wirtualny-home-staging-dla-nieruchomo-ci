@@ -6,6 +6,7 @@ import { contactRequestSchema } from "@/lib/contact-schema";
 import type { ContactApiResponse } from "@/lib/contact-shared";
 import { prisma } from "@/lib/db";
 import { escapeHtml, getAdminEmail, sendEmail } from "@/lib/email";
+import { BodyTooLargeError, readBodyLimited } from "@/lib/http-body";
 
 export const dynamic = "force-dynamic";
 
@@ -40,19 +41,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const declaredLength = Number(request.headers.get("content-length") ?? 0);
-  if (declaredLength > MAX_BODY_BYTES) {
-    return json({ ok: false, error: "Wiadomość jest za długa." }, 413);
-  }
-
   let raw: string;
   try {
-    raw = await request.text();
-  } catch {
+    raw = (await readBodyLimited(request, MAX_BODY_BYTES)).toString("utf8");
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) {
+      return json({ ok: false, error: "Wiadomość jest za długa." }, 413);
+    }
     return json({ ok: false, error: "Nie udało się odczytać formularza." }, 400);
-  }
-  if (raw.length > MAX_BODY_BYTES) {
-    return json({ ok: false, error: "Wiadomość jest za długa." }, 413);
   }
 
   let body: unknown;

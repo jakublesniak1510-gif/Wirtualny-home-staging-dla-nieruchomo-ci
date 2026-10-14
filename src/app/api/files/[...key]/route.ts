@@ -2,7 +2,14 @@ import { isAdminRequest } from "@/lib/admin-auth";
 import { canAccessFile } from "@/lib/file-access";
 import { makeThumbnail, pickThumbWidth } from "@/lib/images";
 import { mimeForExtension } from "@/lib/orders";
-import { StorageError, StorageNotFoundError, contentDisposition, getStorage, sanitizeKey } from "@/lib/storage";
+import {
+  StorageError,
+  StorageNotFoundError,
+  contentDisposition,
+  getStorage,
+  safeDownloadName,
+  sanitizeKey,
+} from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -42,10 +49,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/files/[...ke
       "X-Content-Type-Options": "nosniff",
     };
     if (download) {
-      headers["Content-Disposition"] = contentDisposition(
-        "attachment",
-        download.replace(/[/\\]/g, "_").slice(0, 120),
-      );
+      headers["Content-Disposition"] = contentDisposition("attachment", safeDownloadName(download, key));
     }
     return new Response(new Uint8Array(body), { headers });
   } catch (error) {

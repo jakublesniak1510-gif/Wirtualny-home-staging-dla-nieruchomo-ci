@@ -103,3 +103,19 @@ export async function createCheckoutSession(
   if (!session.url) throw new Error("Stripe nie zwrócił adresu płatności.");
   return { id: session.id, url: session.url };
 }
+
+/**
+ * Wygasza otwartą sesję Checkout (best effort). Sesji już zakończonej (opłaconej lub wygasłej)
+ * Stripe nie pozwala wygasić – wtedy tylko logujemy.
+ */
+export async function expireCheckoutSession(sessionId: string): Promise<boolean> {
+  try {
+    const session = await getStripe().checkout.sessions.retrieve(sessionId);
+    if (session.status !== "open") return false;
+    await getStripe().checkout.sessions.expire(sessionId);
+    return true;
+  } catch (error) {
+    console.warn(`[stripe] Nie udało się wygasić sesji ${sessionId}:`, error instanceof Error ? error.message : error);
+    return false;
+  }
+}

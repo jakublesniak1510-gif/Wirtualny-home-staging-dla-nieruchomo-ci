@@ -276,6 +276,20 @@ export function contentDisposition(type: "attachment" | "inline", filename: stri
   return `${type}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
 
+/**
+ * Nazwa pobieranego pliku podana w adresie (`?download=`): bez separatorów ścieżki i znaków
+ * sterujących, maks. 120 znaków i ZAWSZE z rozszerzeniem pliku z magazynu – link z cudzą nazwą
+ * (np. `faktura.html`) nie zapisze obrazu jako pliku innego typu.
+ */
+export function safeDownloadName(raw: string, key: string): string {
+  const base = key.split("/").pop() ?? "";
+  const ext = base.includes(".") ? (base.split(".").pop() ?? "").toLowerCase() : "";
+  let name = raw.replace(/[/\\]/g, "_").replace(/[\x00-\x1f\x7f]/g, "").trim().slice(0, 120);
+  if (!name) name = base || "plik";
+  if (ext && !name.toLowerCase().endsWith(`.${ext}`)) name = `${name}.${ext}`;
+  return name;
+}
+
 let instance: Storage | undefined;
 
 /** Leniwie tworzony magazyn (konfiguracja czytana przy pierwszym użyciu, nie w buildzie). */

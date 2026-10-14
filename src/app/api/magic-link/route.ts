@@ -13,6 +13,12 @@ const bodySchema = z.object({ email: emailSchema });
 /** 5 próśb / 15 min na parę IP + e-mail oraz 20 / 15 min na samo IP (przeciw masowemu sprawdzaniu adresów). */
 const PER_EMAIL = { limit: 5, windowMs: 15 * 60_000 };
 const PER_IP = { limit: 20, windowMs: 15 * 60_000 };
+/**
+ * Limit wysyłek na sam adres (niezależnie od IP) – chroni skrzynkę ofiary przed zasypaniem linkami
+ * z wielu adresów IP. Po przekroczeniu NIE zwracamy 429 (to zdradzałoby cudzy ruch), tylko po cichu
+ * nie wysyłamy kolejnego e-maila.
+ */
+const PER_EMAIL_GLOBAL = { limit: 5, windowMs: 60 * 60_000 };
 
 const GENERIC_MESSAGE =
   "Jeśli mamy zamówienia na ten adres, wysłaliśmy link logowania. Sprawdź skrzynkę (również folder Spam) – link działa 30 minut.";
@@ -34,6 +40,9 @@ export async function POST(request: Request) {
       { error: "Zbyt wiele prób w krótkim czasie. Odczekaj kilkanaście minut i spróbuj ponownie." },
       { status: 429, headers: { "Retry-After": String(Math.max(byIp.retryAfter, byEmail.retryAfter)) } },
     );
+  }
+  if (!rateLimit(`magic-email:${email}`, PER_EMAIL_GLOBAL).ok) {
+    return Response.json({ ok: true, message: GENERIC_MESSAGE }, { headers: { "Cache-Control": "no-store" } });
   }
   after(async () => {
     try {

@@ -17,7 +17,9 @@ export interface LoginState {
 
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const ip = getClientIp(await headers());
-  if (!rateLimit(`login:${ip}`, LIMITS.login).ok) {
+  // Limit per IP opiera się na X-Forwarded-For (klient może go podrobić), więc dodatkowo
+  // globalny limit prób – rotowanie nagłówka nie pozwala zgadywać hasła bez ograniczeń.
+  if (!rateLimit(`login:${ip}`, LIMITS.login).ok || !rateLimit("login:*", LIMITS.loginGlobal).ok) {
     return { error: "Zbyt wiele prób logowania. Odczekaj kilka minut." };
   }
   if (!isAdminConfigured()) {

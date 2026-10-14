@@ -14,6 +14,13 @@ describe("buildWatermarkSvg", () => {
     expect(buildWatermarkSvg(200, 100)).toContain('font-size="14"');
     expect(buildWatermarkSvg(2000, 1000)).toContain(">wizualizacja<");
   });
+
+  it("escapuje tekst (brak wstrzyknięcia znaczników do SVG)", () => {
+    const svg = buildWatermarkSvg(800, 600, `a<script>"&'</text><image href="x"/>`);
+    expect(svg).not.toContain("<script>");
+    expect(svg).not.toContain("<image");
+    expect(svg).toContain("a&lt;script&gt;&quot;&amp;&apos;&lt;/text&gt;");
+  });
 });
 
 describe("applyWatermark", () => {

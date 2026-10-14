@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { readBodyLimited } from "@/lib/http-body";
 import { ImageValidationError } from "@/lib/images";
 import { OrderError } from "@/lib/order-service";
 import { PricingError } from "@/lib/pricing";
@@ -12,10 +13,14 @@ export function jsonError(status: number, error: string, extra: Record<string, u
   return Response.json({ error, ...extra }, { status });
 }
 
-/** Parsuje JSON z body (null, gdy niepoprawny). */
-export async function readJson(request: Request): Promise<unknown> {
+/** Limit body JSON tras publicznych (zamówienie z 20 zdjęciami to kilka KB). */
+export const MAX_JSON_BYTES = 256 * 1024;
+
+/** Parsuje JSON z body (null, gdy niepoprawny lub większy niż `maxBytes`). */
+export async function readJson(request: Request, maxBytes: number = MAX_JSON_BYTES): Promise<unknown> {
   try {
-    return await request.json();
+    const body = await readBodyLimited(request, maxBytes);
+    return JSON.parse(body.toString("utf8"));
   } catch {
     return null;
   }
