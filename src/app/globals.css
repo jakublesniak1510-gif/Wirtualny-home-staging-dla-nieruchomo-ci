@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+/*
+ * Tokeny marki (Tailwind v4 @theme). Każdy token generuje klasy narzędziowe,
+ * np. --color-brand → bg-brand / text-brand / border-brand, --radius-card → rounded-card.
+ * Paleta z briefu: tło ciepła biel, tekst grafit, akcent zieleń butelkowa, akcent 2 piasek.
+ */
+@theme static {
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Inter, sans-serif;
+
+  --color-paper: #faf8f5; /* tło strony – ciepła biel */
+  --color-surface: #ffffff; /* karty, panele */
+  --color-ink: #1c1c1e; /* tekst główny – grafit */
+  --color-muted: #5c5a57; /* tekst pomocniczy (AA na paper i surface) */
+  --color-line: #e7e1d8; /* obramowania, separatory */
+  --color-cream: #f3eee6; /* tło sekcji wyróżnionych */
+
+  --color-brand: #1f4d3a; /* zieleń butelkowa – akcent główny */
+  --color-brand-dark: #163a2b; /* hover/active */
+  --color-brand-light: #e4ede8; /* jasne tło z akcentem */
+
+  --color-sand: #c9a87c; /* piasek – tylko dekoracyjnie (niski kontrast z bielą) */
+  --color-sand-light: #f1e7d8;
+  --color-sand-dark: #7a5c33; /* piasek do tekstu (AA na jasnym tle) */
+
+  --color-danger: #a4282b;
+  --color-success: #1f6b45;
+
+  --radius-card: 16px;
+  --radius-control: 12px;
+
+  --shadow-soft: 0 1px 2px rgb(28 28 30 / 0.04), 0 4px 16px rgb(28 28 30 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(28 28 30 / 0.05), 0 12px 32px rgb(28 28 30 / 0.1);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-light);
+    color: var(--color-brand-dark);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-brand);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+    letter-spacing: -0.015em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  [id] {
+    scroll-margin-top: 5.5rem;
+  }
+}
+
+@layer components {
+  /* Kontener treści: max-w-6xl, gutter 16 px (24 px od sm). */
+  .container-x {
+    width: 100%;
+    max-width: 72rem; /* = max-w-6xl */
+    margin-inline: auto;
+    padding-inline: 1rem;
+
+    @media (width >= 40rem) {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-control);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.25;
+    text-align: center;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease,
+      box-shadow 150ms ease;
+    cursor: pointer;
+
+    &:disabled,
+    &[aria-disabled="true"] {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+  }
+
+  .btn-primary {
+    background-color: var(--color-brand);
+    color: #fff;
+    box-shadow: var(--shadow-soft);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-brand-dark);
+    }
+  }
+
+  .btn-secondary {
+    background-color: var(--color-surface);
+    color: var(--color-brand);
+    border: 1px solid var(--color-line);
+
+    &:hover:not(:disabled) {
+      border-color: var(--color-brand);
+      background-color: var(--color-brand-light);
+    }
+  }
+
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  /* Link w treści (np. regulamin, FAQ). */
+  .link {
+    color: var(--color-brand);
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+
+    &:hover {
+      color: var(--color-brand-dark);
+      text-decoration-thickness: 2px;
+    }
+  }
+}

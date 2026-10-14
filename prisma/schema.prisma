@@ -1,0 +1,138 @@
+// Wspólny model danych serwisu Wirtualny Staging.
+// Lokalnie SQLite (DATABASE_URL="file:./data/dev.db" – ścieżka względem tego pliku),
+// produkcyjnie Postgres – wystarczy zmienić `provider` i DATABASE_URL.
+// Kwoty zawsze w groszach (Int). Pola JSON trzymamy jako String (zgodność z SQLite).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  NEW
+  PAID
+  IN_PROGRESS
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FREE
+  REFUNDED
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  /// Losowy token w publicznym adresie /zamowienie/[token] (nie zgadywalny).
+  publicToken String      @unique
+  status      OrderStatus @default(NEW)
+
+  email   String
+  phone   String?
+  name    String?
+  company String?
+  nip     String?
+
+  /// Slug stylu z src/lib/styles.ts
+  style          String
+  /// JSON: lista slugów dodatków z src/lib/pricing.ts, np. ["usuniecie-mebli"]
+  addons         String  @default("[]")
+  express        Boolean @default(false)
+  photoCount     Int
+  /// JSON: wynik calculateOrderPrice() z chwili złożenia zamówienia
+  priceBreakdown String
+  /// Kwota do zapłaty w groszach (brutto)
+  totalAmount    Int
+  currency       String  @default("pln")
+
+  paymentStatus         PaymentStatus @default(UNPAID)
+  stripeSessionId       String?       @unique
+  stripePaymentIntentId String?
+
+  /// Użyty kod pakietu (prepaid), jeśli był
+  packageCodeId String?
+  packageCode   PackageCode? @relation(fields: [packageCodeId], references: [id], onDelete: SetNull)
+  /// Kod polecenia podany przez klienta (realizacja nagrody ręcznie przez admina)
+  referralCode  String?
+  notes         String?
+
+  consentTerms   Boolean @default(false)
+  consentDigital Boolean @default(false)
+  consentHonesty Boolean @default(false)
+  consentRights  Boolean @default(false)
+  /// Zamówienie z formularza „Darmowa próbka” (kwota 0, bez Stripe)
+  isSample       Boolean @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  paidAt      DateTime?
+  deliveredAt DateTime?
+
+  photos Photo[]
+
+  @@index([status])
+  @@index([email])
+  @@index([createdAt])
+}
+
+model Photo {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  /// Klucz w magazynie plików (src/lib/storage.ts), np. "<orderId>/original/<plik>"
+  originalKey  String
+  originalName String
+  mimeType     String
+  /// Rozmiar w bajtach
+  size         Int
+  width        Int?
+  height       Int?
+
+  /// Klucz gotowej wizualizacji (ze znakiem wodnym „wizualizacja”)
+  resultKey        String?
+  resultUploadedAt DateTime?
+
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model PackageCode {
+  id           String    @id @default(cuid())
+  code         String    @unique
+  /// 1 kredyt = 1 zdjęcie bazowe (dodatki płatne osobno)
+  creditsTotal Int
+  creditsLeft  Int
+  email        String?
+  note         String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  orders Order[]
+}
+
+model ContactRequest {
+  id        String   @id @default(cuid())
+  /// "contact" | "office" | "sample"
+  type      String
+  name      String
+  email     String
+  phone     String?
+  company   String?
+  message   String?
+  /// JSON z dodatkowymi polami formularza
+  payload   String?
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+}
