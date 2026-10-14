@@ -61,9 +61,13 @@ model Order {
   packageCode   PackageCode? @relation(fields: [packageCodeId], references: [id], onDelete: SetNull)
   /// Ile kredytów kodu pakietu zarezerwowano dla tego zamówienia (zwalniane przy anulowaniu)
   packageCreditsUsed Int @default(0)
-  /// Kod polecenia podany przez klienta (realizacja nagrody ręcznie przez admina)
+  /// Kod polecenia podany przez klienta (e-mail polecającego)
   referralCode  String?
+  /// Kiedy admin wydał nagrodę polecającemu (kod pakietu)
+  referralRewardIssuedAt DateTime?
   notes         String?
+  /// Notatki wewnętrzne operatora (niewidoczne dla klienta)
+  internalNotes String?
 
   consentTerms   Boolean @default(false)
   consentDigital Boolean @default(false)
@@ -80,7 +84,8 @@ model Order {
   /// Kiedy pliki zamówienia usunięto z magazynu (sprzątanie po 30 dniach)
   filesDeletedAt DateTime?
 
-  photos Photo[]
+  photos    Photo[]
+  revisions RevisionRequest[]
 
   @@index([status])
   @@index([email])
@@ -109,7 +114,89 @@ model Photo {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
+  /// Dodatkowe warianty wyniku (poza głównym resultKey), też ze znakiem wodnym
+  results    PhotoResult[]
+  /// Warianty wygenerowane przez AI w panelu admina (bez znaku wodnego, tylko dla operatora)
+  aiVariants AiVariant[]
+  revisions  RevisionRequest[]
+
   @@index([orderId])
+}
+
+/// Dodatkowy wariant gotowej wizualizacji dla jednego zdjęcia (klient dostaje wszystkie).
+model PhotoResult {
+  id      String @id @default(cuid())
+  photoId String
+  photo   Photo  @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  /// Klucz w magazynie (ze znakiem wodnym „wizualizacja”)
+  key       String
+  /// Np. "Wariant B", "Jaśniejsza sofa"
+  label     String?
+  /// "manual" | "ai"
+  source    String   @default("manual")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([photoId])
+}
+
+/// Wariant wygenerowany przez model AI (src/lib/ai/). Operator wybiera najlepszy i publikuje jako wynik.
+model AiVariant {
+  id      String @id @default(cuid())
+  photoId String
+  photo   Photo  @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  /// "PENDING" | "RUNNING" | "DONE" | "FAILED"
+  status    String  @default("PENDING")
+  provider  String
+  model     String
+  prompt    String
+  /// Klucz w magazynie po zakończeniu generowania
+  key       String?
+  error     String?
+  /// Szacowany koszt w groszach (do statystyk)
+  costCents Int?
+  /// Identyfikator zadania u dostawcy (np. predykcja Replicate)
+  externalId String?
+
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([photoId])
+  @@index([status])
+}
+
+/// Zgłoszenie poprawki od klienta (1 bezpłatna runda w ciągu 7 dni – stałe w pricing.ts).
+model RevisionRequest {
+  id      String  @id @default(cuid())
+  orderId String
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  photoId String?
+  photo   Photo?  @relation(fields: [photoId], references: [id], onDelete: SetNull)
+
+  message String
+  /// "OPEN" | "IN_PROGRESS" | "DONE" | "REJECTED"
+  status     String    @default("OPEN")
+  /// Odpowiedź operatora widoczna dla klienta
+  reply      String?
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@index([orderId])
+  @@index([status])
+}
+
+/// Jednorazowy link logowania do „Moje zamówienia” (hasz tokenu, nie sam token).
+model MagicLink {
+  id        String    @id @default(cuid())
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
 }
 
 model PackageCode {
